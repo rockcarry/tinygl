@@ -13,7 +13,7 @@ typedef struct {
 } BMP;
 
 int  bmp_create (BMP *pb, int w, int h, int cdepth);
-void bmp_destory(BMP *pb);
+void bmp_destroy(BMP *pb);
 
 int  bmp_load(BMP *pb, char *file);
 int  bmp_save(BMP *pb, char *file);
