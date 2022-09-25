@@ -133,7 +133,7 @@ void model_get(void *ctx, int type, int i, void *data, int *n)
     }
 }
 
-#ifdef _TEST_
+#ifdef _TEST_MODEL_
 #include "bmp.h"
 int main(void)
 {

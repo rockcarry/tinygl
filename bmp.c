@@ -187,7 +187,7 @@ void bmp_fillrect(BMP *pb, int x, int y, int w, int h, int c)
     }
 }
 
-#if _TEST_
+#if _TEST_BMP_
 int main(int argc, char *argv[])
 {
     BMP mybmp1 = {};
