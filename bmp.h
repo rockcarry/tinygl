@@ -1,6 +1,8 @@
 #ifndef __BMP_H__
 #define __BMP_H__
 
+#include <stdint.h>
+
 #define RGB(r, g, b) (((unsigned)(r) << 16) | ((unsigned)(g) << 8) | ((unsigned)(b) << 0))
 
 /* BMP 对象的类型定义 */
@@ -18,6 +20,8 @@ void bmp_destroy(BMP *pb);
 int  bmp_load(BMP *pb, char *file);
 int  bmp_save(BMP *pb, char *file);
 
+void bmp_setrgb  (BMP *pb, int x, int y, uint8_t  r, uint8_t  g, uint8_t  b);
+void bmp_getrgb  (BMP *pb, int x, int y, uint8_t *r, uint8_t *g, uint8_t *b);
 void bmp_setpixel(BMP *pb, int x, int y, int c);
 int  bmp_getpixel(BMP *pb, int x, int y);
 void bmp_line    (BMP *pb, int x1, int y1, int x2, int y2, int c);

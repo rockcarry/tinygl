@@ -158,6 +158,7 @@ static void clearzbuffer(BMP *pb, float *zbuf)
 int main(void)
 {
     BMP     mybmp = {};
+    BMP     image = {};
     void   *model = model_load("head.obj");
     int     nface = 0, i, j;
     facef_t fface = {};
@@ -168,6 +169,7 @@ int main(void)
     float   intensity = 0, *zbuf = NULL;
 
     bmp_create(&mybmp, 1024, 1024, 24);
+    bmp_load  (&image, "head.bmp");
     model_get (model, MODEL_DATA_LIST_F, 0, NULL, &nface);
 
     zbuf = malloc(SCREEN_WIDTH * SCREEN_HEIGHT * sizeof(float));
@@ -181,13 +183,11 @@ int main(void)
         vector3f_cross((float*)&norm, (float*)&vec1, (float*)&vec2);
         vector3f_norm ((float*)&norm);
         intensity = vector3f_dot((float*)&norm, (float*)&light);
-//      triangle(&mybmp, zbuf, tpts, RGB(0, 255, 0), 0);
-//      triangle(&mybmp, zbuf, tpts, RGB(rand(), rand(), rand()), 1);
-        if (intensity > 0) triangle(&mybmp, zbuf, tpts, RGB(255 * intensity, 255 * intensity, 255 * intensity), 1);
+        if (intensity > 0) triangle(&mybmp, &image, zbuf, tpts, fface.vt, intensity, RGB(255 * intensity, 255 * intensity, 255 * intensity));
     }
-
     bmp_save(&mybmp, "out.bmp");
     free(zbuf);
+    bmp_destroy(&image);
     bmp_destroy(&mybmp);
     model_free(model);
     return 0;

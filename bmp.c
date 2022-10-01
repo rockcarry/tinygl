@@ -108,6 +108,22 @@ int bmp_save(BMP *pb, char *file)
     return fp ? 0 : -1;
 }
 
+void bmp_setrgb(BMP *pb, int x, int y, uint8_t  r, uint8_t  g, uint8_t  b)
+{
+    if (x < 0 || y < 0 || x >= pb->width || y >= pb->height) return;
+    pb->pdata[x * (pb->cdepth / 8) + 0 + y * pb->stride] = b;
+    pb->pdata[x * (pb->cdepth / 8) + 1 + y * pb->stride] = g;
+    pb->pdata[x * (pb->cdepth / 8) + 2 + y * pb->stride] = r;
+}
+
+void bmp_getrgb(BMP *pb, int x, int y, uint8_t *r, uint8_t *g, uint8_t *b)
+{
+    if (x < 0 || y < 0 || x >= pb->width || y >= pb->height) { *r = *g = *b = 0; return; }
+    *b = pb->pdata[x * (pb->cdepth / 8) + 0 + y * pb->stride];
+    *g = pb->pdata[x * (pb->cdepth / 8) + 1 + y * pb->stride];
+    *r = pb->pdata[x * (pb->cdepth / 8) + 2 + y * pb->stride];
+}
+
 void bmp_setpixel(BMP *pb, int x, int y, int c)
 {
     if (x < 0 || y < 0 || x >= pb->width || y >= pb->height) return;

@@ -4,6 +4,6 @@
 #include "bmp.h"
 #include "geometry.h"
 
-void triangle(BMP *pb, float *zbuf, vec3f_t t[3], int c, int fill);
+void triangle(BMP *pb, BMP *img, float *zbuf, vec3f_t vv[3], vec3f_t vt[3], float intensity, int c);
 
 #endif

@@ -12,6 +12,7 @@ typedef struct {
 typedef struct {
     union {
         struct { int x, y, z; };
+        struct { int u, v; };
         int raw[3];
     };
 } vec3i_t;
@@ -27,6 +28,7 @@ typedef struct {
 typedef struct {
     union {
         struct { float x, y, z; };
+        struct { float u, v; };
         float raw[3];
     };
 } vec3f_t;
