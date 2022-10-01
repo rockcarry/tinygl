@@ -1,7 +1,7 @@
 #ifndef __BMP_H__
 #define __BMP_H__
 
-#define RGB(r, g, b) (((r) << 16) | ((g) << 8) | ((b) << 0))
+#define RGB(r, g, b) (((unsigned)(r) << 16) | ((unsigned)(g) << 8) | ((unsigned)(b) << 0))
 
 /* BMP 对象的类型定义 */
 typedef struct {

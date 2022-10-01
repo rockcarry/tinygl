@@ -5,10 +5,10 @@
 
 typedef struct {
     int num_v, num_vt, num_vn, num_f;
-    float *buf_v;
-    float *buf_vt;
-    float *buf_vn;
-    int   *buf_f;
+    vec3f_t *lst_v;
+    vec3f_t *lst_vt;
+    vec3f_t *lst_vn;
+    facei_t *lst_f;
 } MODEL;
 
 void* model_load(char *file)
@@ -34,27 +34,27 @@ void* model_load(char *file)
     model = malloc(sizeof(MODEL) + (num_v + num_vt + num_vn) * 3 * sizeof(float) + num_f * 9 * sizeof(int));
     if (model) {
         memset(model, 0, sizeof(MODEL));
-        model->buf_v  = (float*)((char*)model + sizeof(MODEL));
-        model->buf_vt = (float*)(model->buf_v  + num_v  * 3);
-        model->buf_vn = (float*)(model->buf_vt + num_vt * 3);
-        model->buf_f  = (int  *)(model->buf_vn + num_vn * 3);
+        model->lst_v  = (vec3f_t*)((char*)model + sizeof(MODEL));
+        model->lst_vt = (vec3f_t*)(model->lst_v  + num_v );
+        model->lst_vn = (vec3f_t*)(model->lst_vt + num_vt);
+        model->lst_f  = (facei_t*)(model->lst_vn + num_vn);
         fseek(fp, 0, SEEK_SET);
         while (!feof(fp)) {
             fscanf(fp, "%255s", buf);
             if (strcmp(buf, "v" ) == 0 && model->num_v < num_v) {
-                fscanf(fp, "%f %f %f", model->buf_v + model->num_v * 3 + 0, model->buf_v + model->num_v * 3 + 1, model->buf_v + model->num_v * 3 + 2);
+                fscanf(fp, "%f %f %f", &(model->lst_v[model->num_v].x), &(model->lst_v[model->num_v].y), &(model->lst_v[model->num_v].z));
                 model->num_v++;
             } else if (strcmp(buf, "vt") == 0 && model->num_vt < num_vt) {
-                fscanf(fp, "%f %f %f", model->buf_vt+ model->num_vt* 3 + 0, model->buf_vt+ model->num_vt* 3 + 1, model->buf_vt+ model->num_vt* 3 + 2);
+                fscanf(fp, "%f %f %f", &(model->lst_vt[model->num_vt].x), &(model->lst_vt[model->num_vt].y), &(model->lst_vt[model->num_vt].z));
                 model->num_vt++;
             } else if (strcmp(buf, "vn") == 0 && model->num_vn < num_vn) {
-                fscanf(fp, "%f %f %f", model->buf_vn+ model->num_vn* 3 + 0, model->buf_vn+ model->num_vn* 3 + 1, model->buf_vn+ model->num_vn* 3 + 2);
+                fscanf(fp, "%f %f %f", &(model->lst_vn[model->num_vn].x), &(model->lst_vn[model->num_vn].y), &(model->lst_vn[model->num_vn].z));
                 model->num_vn++;
             } else if (strcmp(buf, "f" ) == 0 && model->num_f  < num_f ) {
                 fscanf(fp, "%d/%d/%d %d/%d/%d %d/%d/%d",
-                    model->buf_f+ model->num_f * 9 + 0, model->buf_f+ model->num_f * 9 + 1, model->buf_f+ model->num_f * 9 + 2,
-                    model->buf_f+ model->num_f * 9 + 3, model->buf_f+ model->num_f * 9 + 4, model->buf_f+ model->num_f * 9 + 5,
-                    model->buf_f+ model->num_f * 9 + 6, model->buf_f+ model->num_f * 9 + 7, model->buf_f+ model->num_f * 9 + 8);
+                    &(model->lst_f[model->num_f].v[0]), &(model->lst_f[model->num_f].vt[0]), &(model->lst_f[model->num_f].vn[0]),
+                    &(model->lst_f[model->num_f].v[1]), &(model->lst_f[model->num_f].vt[1]), &(model->lst_f[model->num_f].vn[1]),
+                    &(model->lst_f[model->num_f].v[2]), &(model->lst_f[model->num_f].vt[2]), &(model->lst_f[model->num_f].vn[2]));
                 model->num_f++;
             }
         }
@@ -81,19 +81,19 @@ void model_save(void *ctx, char *file)
         return;
     }
     for (i = 0; i < model->num_v; i++) {
-        fprintf(fp, "v  %f %f %f\n", model->buf_v [i * 3 + 0], model->buf_v [i * 3 + 1], model->buf_v [i * 3 + 2]);
+        fprintf(fp, "v  %f %f %f\n", model->lst_v[i].x, model->lst_v[i].y, model->lst_v[i].z);
     }
     for (i = 0; i < model->num_vt; i++) {
-        fprintf(fp, "vt %f %f %f\n", model->buf_vt[i * 3 + 0], model->buf_vt[i * 3 + 1], model->buf_vt[i * 3 + 2]);
+        fprintf(fp, "vt %f %f %f\n", model->lst_vt[i].x, model->lst_vt[i].y, model->lst_vt[i].z);
     }
     for (i = 0; i < model->num_vn; i++) {
-        fprintf(fp, "vn %f %f %f\n", model->buf_vn[i * 3 + 0], model->buf_vn[i * 3 + 1], model->buf_vn[i * 3 + 2]);
+        fprintf(fp, "vn %f %f %f\n", model->lst_vn[i].x, model->lst_vn[i].y, model->lst_vn[i].z);
     }
     for (i = 0; i < model->num_f; i++) {
         fprintf(fp, "f  %d/%d/%d %d/%d/%d %d/%d/%d\n",
-            model->buf_f[i * 9 + 0], model->buf_f[i * 9 + 1], model->buf_f[i * 9 + 2],
-            model->buf_f[i * 9 + 3], model->buf_f[i * 9 + 4], model->buf_f[i * 9 + 5],
-            model->buf_f[i * 9 + 6], model->buf_f[i * 9 + 7], model->buf_f[i * 9 + 8]);
+            model->lst_f[i].v[0], model->lst_f[i].vt[0], model->lst_f[i].vn[0],
+            model->lst_f[i].v[1], model->lst_f[i].vt[1], model->lst_f[i].vn[1],
+            model->lst_f[i].v[2], model->lst_f[i].vt[2], model->lst_f[i].vn[2]);
     }
     fclose(fp);
 }
@@ -101,65 +101,95 @@ void model_save(void *ctx, char *file)
 void model_get(void *ctx, int type, int i, void *data, int *n)
 {
     MODEL *model = (MODEL*)ctx;
-    int    j, k;
+    int    j;
     if (!ctx) return;
     switch (type) {
     case MODEL_DATA_LIST_V:
-        if (data) *(float**)data = model->buf_v;
-        if (n   ) *(int   *)n    = model->num_v;
+        if (data) *(vec3f_t**)data = model->lst_v;
+        if (n   ) *(int     *)n    = model->num_v;
         break;
     case MODEL_DATA_LIST_VT:
-        if (data) *(float**)data = model->buf_vt;
-        if (n   ) *(int   *)n    = model->num_vt;
+        if (data) *(vec3f_t**)data = model->lst_vt;
+        if (n   ) *(int     *)n    = model->num_vt;
         break;
     case MODEL_DATA_LIST_VN:
-        if (data) *(float**)data = model->buf_vn;
-        if (n   ) *(int   *)n    = model->num_vn;
+        if (data) *(vec3f_t**)data = model->lst_vn;
+        if (n   ) *(int     *)n    = model->num_vn;
         break;
     case MODEL_DATA_LIST_F:
-        if (data) *(int  **)data = model->buf_f;
-        if (n   ) *(int   *)n    = model->num_f;
+        if (data) *(facei_t**)data = model->lst_f;
+        if (n   ) *(int     *)n    = model->num_f;
         break;
     case MODEL_DATA_TRIANGLE:
         i %= model->num_f;
         for (j = 0; j < 3; j++) {
-            for (k = 0; k < 3; k++) {
-                ((float*)data)[j * 9 + 0 * 3 + k] = model->buf_v [(model->buf_f[i * 9 + j * 3 + 0] - 1) % model->num_v  * 3 + k];
-                ((float*)data)[j * 9 + 1 * 3 + k] = model->buf_vt[(model->buf_f[i * 9 + j * 3 + 1] - 1) % model->num_vt * 3 + k];
-                ((float*)data)[j * 9 + 2 * 3 + k] = model->buf_vn[(model->buf_f[i * 9 + j * 3 + 2] - 1) % model->num_vn * 3 + k];
-            }
+            ((facef_t*)data)->v [j] = model->lst_v [(model->lst_f[i].v [j] - 1) % model->num_v ];
+            ((facef_t*)data)->vt[j] = model->lst_vt[(model->lst_f[i].vt[j] - 1) % model->num_vt];
+            ((facef_t*)data)->vn[j] = model->lst_vn[(model->lst_f[i].vn[j] - 1) % model->num_vn];
         }
         break;
     }
 }
 
 #ifdef _TEST_MODEL_
+#include <float.h>
 #include "bmp.h"
+#include "geometry.h"
+#include "triangle.h"
+
+static void world2screen(BMP *pb, vec3f_t *screen, vec3f_t *world)
+{
+    screen->x = 0.5 * (world->x + 1) * (pb->width - 1);
+    screen->y = (pb->height - 1) - 0.5 * (world->y + 1) * (pb->height - 1);
+    screen->z = world->z;
+}
+
+static void clearzbuffer(BMP *pb, float *zbuf)
+{
+    if (pb && zbuf) {
+        int i, n = pb->width * pb->height;
+        for (i = 0; i < n; i++) zbuf[i] = -FLT_MAX;
+    }
+}
+
+#define SCREEN_WIDTH  1024
+#define SCREEN_HEIGHT 1024
+
 int main(void)
 {
-    BMP    mybmp = {};
-    void  *model = model_load("african_head.obj");
-    int    f_num = 0, i, j;
-    float  triangle[27];
-    bmp_create(&mybmp, 1027, 768, 24);
-    model_get (model, MODEL_DATA_LIST_F, 0, NULL, &f_num);
-    for (i = 0; i < f_num; i++) {
-        model_get(model, MODEL_DATA_TRIANGLE, i, &triangle, NULL);
-        for (j = 0; j < 3; j++) {
-            float fx1 = triangle[(j + 0) % 3 * 9 + 0];
-            float fy1 = triangle[(j + 0) % 3 * 9 + 1];
-            float fx2 = triangle[(j + 1) % 3 * 9 + 0];
-            float fy2 = triangle[(j + 1) % 3 * 9 + 1];
-            int   ix1 = (fx1 + 1) * mybmp.width  / 2;
-            int   iy1 = mybmp.height - 1 - (fy1 + 1) * mybmp.height / 2;
-            int   ix2 = (fx2 + 1) * mybmp.width  / 2;
-            int   iy2 = mybmp.height - 1 - (fy2 + 1) * mybmp.height / 2;
-            bmp_line(&mybmp, ix1, iy1, ix2, iy2, RGB(0, 255, 0));
-        }
+    BMP     mybmp = {};
+    void   *model = model_load("head.obj");
+    int     nface = 0, i, j;
+    facef_t fface = {};
+    vec3f_t light = { .z = -1 };
+    vec3f_t norm  = {};
+    vec3f_t tpts[3];
+    vec3f_t vec1, vec2;
+    float   intensity = 0, *zbuf = NULL;
+
+    bmp_create(&mybmp, 1024, 1024, 24);
+    model_get (model, MODEL_DATA_LIST_F, 0, NULL, &nface);
+
+    zbuf = malloc(SCREEN_WIDTH * SCREEN_HEIGHT * sizeof(float));
+    clearzbuffer(&mybmp, zbuf);
+
+    for (i = 0; i < nface; i++) {
+        model_get(model, MODEL_DATA_TRIANGLE, i, &fface, NULL);
+        for (j = 0; j < 3; j++) world2screen(&mybmp, tpts + j, fface.v + j);
+        vector3f_sub((float*)&vec1, (float*)(fface.v + 2), (float*)(fface.v + 0));
+        vector3f_sub((float*)&vec2, (float*)(fface.v + 1), (float*)(fface.v + 0));
+        vector3f_cross((float*)&norm, (float*)&vec1, (float*)&vec2);
+        vector3f_norm ((float*)&norm);
+        intensity = vector3f_dot((float*)&norm, (float*)&light);
+//      triangle(&mybmp, zbuf, tpts, RGB(0, 255, 0), 0);
+//      triangle(&mybmp, zbuf, tpts, RGB(rand(), rand(), rand()), 1);
+        if (intensity > 0) triangle(&mybmp, zbuf, tpts, RGB(255 * intensity, 255 * intensity, 255 * intensity), 1);
     }
+
     bmp_save(&mybmp, "out.bmp");
-    model_free(model);
+    free(zbuf);
     bmp_destroy(&mybmp);
+    model_free(model);
     return 0;
 }
 #endif

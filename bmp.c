@@ -168,21 +168,26 @@ void bmp_bitblt(BMP *pbdst, int dstx, int dsty, BMP *pbsrc, int srcx, int srcy, 
 
 void bmp_fillrect(BMP *pb, int x, int y, int w, int h, int c)
 {
-    uint8_t r = c >> 16, g = c >> 8, b = c >> 0, alpha = c >> 24;
-    uint8_t fr = r, fg = g, fb = b, br, bg, bb;
-    int  i, j;
-    for (i=0; i<h; i++) {
-        for (j=0; j<w; j++) {
-            if (alpha) {
+    int a = c >> 24, i, j;
+    if (a) {
+        uint8_t r = c >> 16, g = c >> 8, b = c >> 0, fr, fg, fb, br, bg, bb;
+        for (i = 0; i < h; i++) {
+            for (j = 0; j < w; j++) {
                 c  = bmp_getpixel(pb, x + j, y + i);
                 br = c >> 16;
                 bg = c >> 8 ;
                 bb = c >> 0 ;
-                fr = r + alpha * (br - r) / 255;
-                fg = g + alpha * (bg - g) / 255;
-                fb = b + alpha * (bb - b) / 255;
+                fr = r + a * (br - r) / 255;
+                fg = g + a * (bg - g) / 255;
+                fb = b + a * (bb - b) / 255;
+                bmp_setpixel(pb, x + j, y + i, RGB(fr, fg, fb));
             }
-            bmp_setpixel(pb, x + j, y + i, RGB(fr, fg, fb));
+        }
+    } else {
+        for (i = 0; i < h; i++) {
+            for (j = 0; j < w; j++) {
+                bmp_setpixel(pb, x + j, y + i, c);
+            }
         }
     }
 }
