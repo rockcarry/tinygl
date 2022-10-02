@@ -1,5 +1,6 @@
 #!/bin/sh
 
-gcc -Wall -D_TEST_BMP_ bmp.c -o test_bmp
-gcc -Wall -D_TEST_MODEL_ bmp.c vector.c matrix.c triangle.c model.c -o test_model
+gcc -Wall -D_TEST_TEXTURE_ -o test_texture texture.c
+gcc -Wall -D_TEST_MODEL_   -o test_model   texture.c model.c
+gcc -Wall -D_TEST_TINYGL_  -o test_tinygl  vector.c matrix.c texture.c triangle.c model.c shader.c tinygl.c
 

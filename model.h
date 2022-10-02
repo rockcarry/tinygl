@@ -15,14 +15,10 @@ typedef struct {
     int v[3], vt[3], vn[3];
 } facei_t;
 
-typedef struct {
-    vec3f_t v[3], vt[3], vn[3];
-} facef_t;
-
 void* model_load(char *object, char *texture);
 void  model_save(void *ctx, char *object, char *texture);
 void  model_free(void *ctx );
 void* model_get_data(void *ctx, int type, int *listsize);
-void  model_get_face(void *ctx, int idx, facef_t *face);
+void  model_get_face(void *ctx, int idx, vertex_t face[3]);
 
 #endif

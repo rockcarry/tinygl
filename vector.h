@@ -1,4 +1,4 @@
-#ifndef __VECTOR_H__
+﻿#ifndef __VECTOR_H__
 #define __VECTOR_H__
 
 typedef struct {
@@ -12,10 +12,17 @@ typedef struct {
 typedef struct {
     union {
         struct { int x, y, z; };
-        struct { int u, v; };
+        struct { int r, g, b; };
         int raw[3];
     };
 } vec3i_t;
+
+typedef struct {
+    union {
+        struct { int x, y, z, w; };
+        int raw[4];
+    };
+} vec4i_t;
 
 typedef struct {
     union {
@@ -28,10 +35,30 @@ typedef struct {
 typedef struct {
     union {
         struct { float x, y, z; };
-        struct { float u, v; };
+        struct { float r, g, b; };
+        struct { float u, v;    };
+        struct { float alpha, beta, gamma; };
         float raw[3];
     };
 } vec3f_t;
+
+typedef struct {
+    union {
+        struct { float x, y, z, w; };
+        float raw[4];
+    };
+} vec4f_t;
+
+typedef struct {
+    vec4f_t v;  // 顶点坐标
+    vec2f_t vt; // 纹理坐标
+    vec3f_t vn; // 法向量
+    vec3i_t c ; // 颜色值
+} vertex_t;
+
+typedef struct {
+    vertex_t v[3];
+} triangle_t;
 
 void  vectorni_add  (int *r, int *a, int *b, int n);
 void  vectorni_sub  (int *r, int *a, int *b, int n);

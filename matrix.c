@@ -1,6 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
-#include "vector.h"
+#include "matrix.h"
 
 void matrix_mul(float *mr, float *ma, int rowa, int cola, float *mb, int rowb, int colb)
 {
