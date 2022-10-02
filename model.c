@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include "bmp.h"
 #include "model.h"
 
 typedef struct {
@@ -9,16 +10,18 @@ typedef struct {
     vec3f_t *lst_vt;
     vec3f_t *lst_vn;
     facei_t *lst_f;
+    BMP      texture;
 } MODEL;
 
-void* model_load(char *file)
+void* model_load(char *object, char *texture)
 {
     MODEL *model = NULL;
-    FILE  *fp    = fopen(file, "rb");
+    FILE  *fp    = fopen(object, "rb");
     int    num_v = 0, num_vt = 0, num_vn = 0, num_f = 0;
     char   buf[256];
+
     if (!fp) {
-        printf("model_load, failed to open file %s !\n", file);
+        printf("model_load, failed to open file %s !\n", object);
         return NULL;
     }
 
@@ -59,25 +62,33 @@ void* model_load(char *file)
             }
         }
     }
-
     fclose(fp);
+
+    if (bmp_load(&model->texture, texture) != 0) {
+        bmp_create(&model->texture, 8, 8, 24);
+        bmp_fillrect(&model->texture, 0, 0, 8, 8, RGB(0, 255, 0));
+    }
     return model;
 }
 
 void model_free(void *ctx)
 {
-    free(ctx);
+    MODEL *model = (MODEL*)ctx;
+    if (model) {
+        bmp_destroy(&model->texture);
+        free(ctx);
+    }
 }
 
-void model_save(void *ctx, char *file)
+void model_save(void *ctx, char *object, char *texture)
 {
     MODEL *model = (MODEL*)ctx;
     FILE  *fp    = NULL;
     int    i;
     if (!ctx) return;
-    fp = fopen(file, "wb");
+    fp = fopen(object, "wb");
     if (!fp) {
-        printf("model_save, failed to open file %s !\n", file);
+        printf("model_save, failed to open file %s !\n", object);
         return;
     }
     for (i = 0; i < model->num_v; i++) {
@@ -96,53 +107,52 @@ void model_save(void *ctx, char *file)
             model->lst_f[i].v[2], model->lst_f[i].vt[2], model->lst_f[i].vn[2]);
     }
     fclose(fp);
+    bmp_save(&model->texture, texture);
 }
 
-void model_get(void *ctx, int type, int i, void *data, int *n)
+void* model_get_data(void *ctx, int type, int *listsize)
 {
     MODEL *model = (MODEL*)ctx;
-    int    j;
-    if (!ctx) return;
+    if (!ctx) return NULL;
     switch (type) {
     case MODEL_DATA_LIST_V:
-        if (data) *(vec3f_t**)data = model->lst_v;
-        if (n   ) *(int     *)n    = model->num_v;
-        break;
+        if (listsize) *listsize = model->num_v;
+        return model->lst_v;
     case MODEL_DATA_LIST_VT:
-        if (data) *(vec3f_t**)data = model->lst_vt;
-        if (n   ) *(int     *)n    = model->num_vt;
-        break;
+        if (listsize) *listsize = model->num_vt;
+        return model->lst_vt;
     case MODEL_DATA_LIST_VN:
-        if (data) *(vec3f_t**)data = model->lst_vn;
-        if (n   ) *(int     *)n    = model->num_vn;
-        break;
+        if (listsize) *listsize = model->num_vn;
+        return model->lst_vn;
     case MODEL_DATA_LIST_F:
-        if (data) *(facei_t**)data = model->lst_f;
-        if (n   ) *(int     *)n    = model->num_f;
-        break;
-    case MODEL_DATA_TRIANGLE:
-        i %= model->num_f;
-        for (j = 0; j < 3; j++) {
-            ((facef_t*)data)->v [j] = model->lst_v [(model->lst_f[i].v [j] - 1) % model->num_v ];
-            ((facef_t*)data)->vt[j] = model->lst_vt[(model->lst_f[i].vt[j] - 1) % model->num_vt];
-            ((facef_t*)data)->vn[j] = model->lst_vn[(model->lst_f[i].vn[j] - 1) % model->num_vn];
+        if (listsize) *listsize = model->num_f;
+        return model->lst_f;
+    case MODEL_DATA_TEXTURE:
+        if (listsize) *listsize = 1;
+        return &model->texture;
+    }
+    return NULL;
+}
+
+void model_get_face(void *ctx, int idx, facef_t *face)
+{
+    MODEL *model = (MODEL*)ctx;
+    if (ctx) {
+        int  i;
+        idx %= model->num_f;
+        for (i = 0; i < 3; i++) {
+            face->v [i] = model->lst_v [(model->lst_f[idx].v [i] - 1) % model->num_v ];
+            face->vt[i] = model->lst_vt[(model->lst_f[idx].vt[i] - 1) % model->num_vt];
+            face->vn[i] = model->lst_vn[(model->lst_f[idx].vn[i] - 1) % model->num_vn];
         }
-        break;
     }
 }
 
 #ifdef _TEST_MODEL_
 #include <float.h>
 #include "bmp.h"
-#include "geometry.h"
+#include "matrix.h"
 #include "triangle.h"
-
-static void world2screen(BMP *pb, vec3f_t *screen, vec3f_t *world)
-{
-    screen->x = 0.5 * (world->x + 1) * (pb->width - 1);
-    screen->y = (pb->height - 1) - 0.5 * (world->y + 1) * (pb->height - 1);
-    screen->z = world->z;
-}
 
 static void clearzbuffer(BMP *pb, float *zbuf)
 {
@@ -152,42 +162,103 @@ static void clearzbuffer(BMP *pb, float *zbuf)
     }
 }
 
+static void projection_matrix(float *m, vec3f_t *camera)
+{
+    matrix_identity(m , 4);
+    m[3 * 4 + 2] = -1.0 / camera->z;
+}
+
+static void projection_division(float *m)
+{
+    m[0 * 1 + 0] = m[0 * 1 + 0] / m[3 * 1 + 0];
+    m[1 * 1 + 0] = m[1 * 1 + 0] / m[3 * 1 + 0];
+    m[2 * 1 + 0] = m[2 * 1 + 0] / m[3 * 1 + 0];
+    m[3 * 1 + 0] = 1.0f;
+}
+
+static void viewport_matrix(float *m, int x, int y, int w, int h, int depth)
+{
+    matrix_identity(m , 4);
+    m[0 * 4 + 3] = (float)x + w / 2.0;
+    m[1 * 4 + 3] = (float)y + h / 2.0;
+    m[2 * 4 + 3] = (float)depth / 2.0;
+
+    m[0 * 4 + 0] = (float)w / 2.0;
+    m[1 * 4 + 1] = (float)h /-2.0;
+    m[2 * 4 + 2] = (float)depth / 2.0;
+}
+
+static void world2screen_old(BMP *pb, vec3f_t *screen, vec3f_t *world)
+{
+    screen->x = 0.5 * (world->x + 1) * (pb->width - 1);
+    screen->y = (pb->height - 1) - 0.5 * (world->y + 1) * (pb->height - 1);
+    screen->z = world->z;
+}
+
+static void world2screen(vec3f_t *screen, vec3f_t *world, float *mat_model, float *mat_view, float *mat_proj, float *mat_port)
+{
+    float mat_tmp1[4] = { world->x, world->y, world->z, 1.0 };
+    float mat_tmp2[4];
+    float mat_tmp3[4 * 4], mat_mvp[4 * 4];
+
+    matrix_mul(mat_tmp3, mat_proj , 4, 4, mat_view , 4, 4);
+    matrix_mul(mat_mvp , mat_tmp3 , 4, 4, mat_model, 4, 4);
+    matrix_mul(mat_tmp2, mat_mvp  , 4, 4, mat_tmp1 , 4, 1);
+
+    projection_division(mat_tmp2);
+    matrix_mul(mat_tmp1, mat_port , 4, 4, mat_tmp2, 4, 1);
+
+    screen->x = mat_tmp1[0];
+    screen->y = mat_tmp1[1];
+    screen->z = mat_tmp1[2];
+}
+
 #define SCREEN_WIDTH  1024
 #define SCREEN_HEIGHT 1024
 
 int main(void)
 {
-    BMP     mybmp = {};
-    BMP     image = {};
-    void   *model = model_load("head.obj");
+    BMP     mybmp = {}, *texture = NULL;
+    void   *model = model_load("head.obj", "head.bmp");
     int     nface = 0, i, j;
     facef_t fface = {};
     vec3f_t light = { .z = -1 };
+    vec3f_t camera= { .z =  3 };
     vec3f_t norm  = {};
     vec3f_t tpts[3];
     vec3f_t vec1, vec2;
     float   intensity = 0, *zbuf = NULL;
 
+    float matrix_model[4 * 4];
+    float matrix_view [4 * 4];
+    float matrix_proj [4 * 4];
+    float matrix_port [4 * 4];
+
     bmp_create(&mybmp, 1024, 1024, 24);
-    bmp_load  (&image, "head.bmp");
-    model_get (model, MODEL_DATA_LIST_F, 0, NULL, &nface);
+    model_get_data(model, MODEL_DATA_LIST_F, &nface);
+    texture = model_get_data(model, MODEL_DATA_TEXTURE, NULL);
 
     zbuf = malloc(SCREEN_WIDTH * SCREEN_HEIGHT * sizeof(float));
     clearzbuffer(&mybmp, zbuf);
 
+    matrix_identity(matrix_model, 4);
+    matrix_identity(matrix_view , 4);
+    projection_matrix(matrix_proj, &camera);
+    viewport_matrix  (matrix_port, mybmp.width / 8, mybmp.height / 8, mybmp.width * 3 / 4, mybmp.height * 3 / 4, 255);
+
     for (i = 0; i < nface; i++) {
-        model_get(model, MODEL_DATA_TRIANGLE, i, &fface, NULL);
-        for (j = 0; j < 3; j++) world2screen(&mybmp, tpts + j, fface.v + j);
+        model_get_face(model, i, &fface);
+        for (j = 0; j < 3; j++) world2screen(tpts + j, fface.v + j, matrix_model, matrix_view, matrix_proj, matrix_port);
         vector3f_sub((float*)&vec1, (float*)(fface.v + 2), (float*)(fface.v + 0));
         vector3f_sub((float*)&vec2, (float*)(fface.v + 1), (float*)(fface.v + 0));
         vector3f_cross((float*)&norm, (float*)&vec1, (float*)&vec2);
         vector3f_norm ((float*)&norm);
         intensity = vector3f_dot((float*)&norm, (float*)&light);
-        if (intensity > 0) triangle(&mybmp, &image, zbuf, tpts, fface.vt, intensity, RGB(255 * intensity, 255 * intensity, 255 * intensity));
+        if (intensity > 0) triangle(&mybmp, texture, zbuf, tpts, fface.vt, intensity, RGB(255 * intensity, 255 * intensity, 255 * intensity));
     }
-    bmp_save(&mybmp, "out.bmp");
+
     free(zbuf);
-    bmp_destroy(&image);
+    bmp_save(&mybmp, "out.bmp");
     bmp_destroy(&mybmp);
     model_free(model);
     return 0;

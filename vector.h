@@ -1,5 +1,5 @@
-#ifndef __GEOMETRY_H__
-#define __GEOMETRY_H__
+#ifndef __VECTOR_H__
+#define __VECTOR_H__
 
 typedef struct {
     union {

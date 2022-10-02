@@ -1,5 +1,5 @@
 #include <math.h>
-#include "geometry.h"
+#include "vector.h"
 
 #define VECTOR_ADD(r, a, b, n) \
 do { \
