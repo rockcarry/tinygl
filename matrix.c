@@ -5,10 +5,6 @@
 void matrix_mul(float *mr, float *ma, int rowa, int cola, float *mb, int rowb, int colb)
 {
     int i, j, k;
-    if (cola != rowb) {
-        printf("incorrect matrix size, rowa: %d, cola: %d, rowb: %d, colb: %d !\n", rowa, cola, rowb, colb);
-        return;
-    }
     for (i = 0; i < rowa; i++) {
         for (j = 0; j < colb; j++) {
             float sum = 0;
@@ -23,10 +19,6 @@ void matrix_mul(float *mr, float *ma, int rowa, int cola, float *mb, int rowb, i
 void matrix_transpose(float *mr, int rowr, int colr, float *ma, int rowa, int cola)
 {
     int i, j;
-    if (rowr != cola || colr != rowa) {
-        printf("incorrect matrix size, rowr: %d, colr: %d, rowa: %d, cola: %d !\n", rowr, colr, rowa, cola);
-        return;
-    }
     for (i = 0; i < rowr; i++) {
         for (j = 0; j < colr; j++) {
             mr[i * colr + j] = ma[j * cola + i];

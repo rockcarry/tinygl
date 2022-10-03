@@ -24,6 +24,10 @@ void draw_triangle(TEXTURE *dst, float *zbuf, void *shader, vertex_t v[3])
         if (fminy > v[i].v.y) fminy = v[i].v.y;
         if (fmaxy < v[i].v.y) fmaxy = v[i].v.y;
     }
+    if (fminx < 0) fminx = 0;
+    if (fminy < 0) fminy = 0;
+    if (fmaxx > dst->width - 1) fmaxx = dst->width - 1;
+    if (fmaxy > dst->height- 1) fmaxy = dst->height- 1;
 
     for (iminy = floor(fminy), imaxy = ceil (fmaxy), i = iminy; i <= imaxy; i++) {
         for (iminx = floor(fminx), imaxx = ceil (fmaxx), j = iminx; j <= imaxx; j++) {
@@ -31,9 +35,11 @@ void draw_triangle(TEXTURE *dst, float *zbuf, void *shader, vertex_t v[3])
             if (bc.alpha < 0 || bc.beta < 0 || bc.gamma < 0) continue;
             z = bc.alpha * v[0].v.z + bc.beta * v[1].v.z + bc.gamma * v[2].v.z;
             if (zbuf[j + i * dst->width] < z) {
-                vec3i_t rgb; shader_fragment(shader, v, &bc, &rgb);
-                texture_setrgb(dst, j, i, rgb.r, rgb.g, rgb.b);
-                zbuf[j + i * dst->width] = z;
+                vec3i_t rgb;
+                if (shader_fragment(shader, v, &bc, &rgb) == 0) {
+                    texture_setrgb(dst, j, i, rgb.r, rgb.g, rgb.b);
+                    zbuf[j + i * dst->width] = z;
+                }
             }
         }
     }

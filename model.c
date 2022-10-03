@@ -5,6 +5,10 @@
 #include "model.h"
 
 typedef struct {
+    int v[3], vt[3], vn[3];
+} facei_t;
+
+typedef struct {
     int num_v, num_vt, num_vn, num_f;
     vec3f_t *lst_v;
     vec3f_t *lst_vt;
@@ -103,62 +107,42 @@ void model_save(void *ctx, char *fileobj, char *filetext)
     texture_save(model->texture, filetext);
 }
 
-void* model_get_data(void *ctx, int type, int *listsize)
+void* model_get_texture(void *ctx)
 {
     MODEL *model = (MODEL*)ctx;
-    if (!ctx) return NULL;
-    switch (type) {
-    case MODEL_DATA_LIST_V:
-        if (listsize) *listsize = model->num_v;
-        return model->lst_v;
-    case MODEL_DATA_LIST_VT:
-        if (listsize) *listsize = model->num_vt;
-        return model->lst_vt;
-    case MODEL_DATA_LIST_VN:
-        if (listsize) *listsize = model->num_vn;
-        return model->lst_vn;
-    case MODEL_DATA_LIST_F:
-        if (listsize) *listsize = model->num_f;
-        return model->lst_f;
-    case MODEL_DATA_TEXTURE:
-        if (listsize) *listsize = 1;
-        return &model->texture;
-    }
-    return NULL;
+    return model ? model->texture : NULL;
 }
 
-void model_get_face(void *ctx, int idx, vertex_t face[3])
+int model_get_face(void *ctx, int idx, vertex_t face[3])
 {
+    int    i;
     MODEL *model = (MODEL*)ctx;
-    if (ctx) {
-        int  i;
-        idx %= model->num_f;
-        for (i = 0; i < 3; i++) {
-            face[i].v .x     = model->lst_v [(model->lst_f[idx].v [i] - 1) % model->num_v ].x;
-            face[i].v .y     = model->lst_v [(model->lst_f[idx].v [i] - 1) % model->num_v ].y;
-            face[i].v .z     = model->lst_v [(model->lst_f[idx].v [i] - 1) % model->num_v ].z;
-            face[i].v .w     = 1;
-            face[i].vt.u     = model->lst_vt[(model->lst_f[idx].vt[i] - 1) % model->num_vt].u;
-            face[i].vt.v     = model->lst_vt[(model->lst_f[idx].vt[i] - 1) % model->num_vt].v;
-            face[i].vn.alpha = model->lst_vn[(model->lst_f[idx].vn[i] - 1) % model->num_vn].alpha;
-            face[i].vn.beta  = model->lst_vn[(model->lst_f[idx].vn[i] - 1) % model->num_vn].beta;
-            face[i].vn.gamma = model->lst_vn[(model->lst_f[idx].vn[i] - 1) % model->num_vn].gamma;
-        }
+    if (ctx == NULL) return -1;
+    if (idx == -1  ) return model->num_f;
+
+    idx %= model->num_f;
+    for (i = 0; i < 3; i++) {
+        face[i].v .x     = model->lst_v [(model->lst_f[idx].v [i] - 1) % model->num_v ].x;
+        face[i].v .y     = model->lst_v [(model->lst_f[idx].v [i] - 1) % model->num_v ].y;
+        face[i].v .z     = model->lst_v [(model->lst_f[idx].v [i] - 1) % model->num_v ].z;
+        face[i].v .w     = 1;
+        face[i].vt.u     = model->lst_vt[(model->lst_f[idx].vt[i] - 1) % model->num_vt].u;
+        face[i].vt.v     = model->lst_vt[(model->lst_f[idx].vt[i] - 1) % model->num_vt].v;
+        face[i].vn.alpha = model->lst_vn[(model->lst_f[idx].vn[i] - 1) % model->num_vn].alpha;
+        face[i].vn.beta  = model->lst_vn[(model->lst_f[idx].vn[i] - 1) % model->num_vn].beta;
+        face[i].vn.gamma = model->lst_vn[(model->lst_f[idx].vn[i] - 1) % model->num_vn].gamma;
     }
+    return 0;
 }
 
 #ifdef _TEST_MODEL_
 int main(void)
 {
-    void    *model    = model_load("head.obj", "head.bmp");
-    int      nface    = 0, i;
+    void    *model = model_load("head.obj", "head.bmp");
+    int      nface = model_get_face(model, -1, NULL);
+    int      i;
     vertex_t triangle[3];
-
-    model_get_data(model, MODEL_DATA_LIST_F, &nface);
-    for (i = 0; i < nface; i++) {
-        model_get_face(model, i, triangle);
-    }
-
+    for (i = 0; i < nface; i++) model_get_face(model, i, triangle);
     model_save(model, "out.obj", NULL);
     model_free(model);
     return 0;
