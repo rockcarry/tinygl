@@ -17,7 +17,7 @@ typedef struct {
 
 static void clearzbuffer(TINYGL *gl)
 {
-    int i, n = gl->screen->width * gl->screen->height;
+    int i, n = gl->screen->w * gl->screen->h;
     for (i = 0; i < n; i++) gl->zbuffer[i] = -FLT_MAX;
 }
 
@@ -26,7 +26,7 @@ void* tinygl_init(int w, int h, void *shader)
     TINYGL *gl = malloc(sizeof(TINYGL) + w * h * sizeof(float));
     if (!gl) goto failed;
 
-    gl->screen = texture_init(w, h, 0);
+    gl->screen = texture_init(w, h);
     gl->defshd = shader_init (NULL, NULL);
     if (!gl->screen || !gl->defshd) goto failed;
 
@@ -68,7 +68,7 @@ void tinygl_clear(void *ctx, char *type)
     TINYGL *gl = (TINYGL*)ctx;
     if (!ctx) return;
     if (strcmp(type, "screen") == 0) {
-        texture_fillrect(gl->screen, 0, 0, gl->screen->width, gl->screen->height, 0);
+        texture_fillrect(gl->screen, 0, 0, gl->screen->w, gl->screen->h, 0);
     } else if (strcmp(type, "zbuffer") == 0) {
         clearzbuffer(gl);
     }
@@ -110,7 +110,8 @@ void* tinygl_get_param(void *ctx, char *name)
 #ifdef _TEST_TINYGL_
 int main(void)
 {
-    void *tinygl = tinygl_init(1024, 1024, NULL);
+    void *shader = shader_init("perspective", "normal1");
+    void *tinygl = tinygl_init(1024, 1024, shader);
     void *model  = model_load ("head.obj", "head.bmp");
 
     tinygl_draw(tinygl, model);
@@ -118,6 +119,7 @@ int main(void)
 
     model_free (model );
     tinygl_free(tinygl);
+    shader_free(shader);
     return 0;
 }
 #endif

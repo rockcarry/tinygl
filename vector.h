@@ -1,59 +1,54 @@
 ﻿#ifndef __VECTOR_H__
 #define __VECTOR_H__
 
-typedef struct {
-    union {
-        struct { int x, y; };
-        struct { int u, v; };
-        int raw[2];
-    };
+#include <stdint.h>
+
+typedef union {
+    struct { int x, y; };
+    struct { int u, v; };
+    int raw[2];
 } vec2i_t;
 
-typedef struct {
-    union {
-        struct { int x, y, z; };
-        struct { int r, g, b; };
-        int raw[3];
-    };
+typedef union {
+    struct { int x, y, z; };
+    uint8_t raw[3];
 } vec3i_t;
 
-typedef struct {
-    union {
-        struct { int x, y, z, w; };
-        int raw[4];
-    };
+typedef union {
+    struct { int x, y, z, w; };
+    int raw[4];
 } vec4i_t;
 
-typedef struct {
-    union {
-        struct { float x, y; };
-        struct { float u, v; };
-        float raw[2];
-    };
+typedef union {
+    struct { float x, y; };
+    struct { float u, v; };
+    float raw[2];
 } vec2f_t;
 
-typedef struct {
-    union {
-        struct { float x, y, z; };
-        struct { float r, g, b; };
-        struct { float u, v;    };
-        struct { float alpha, beta, gamma; };
-        float raw[3];
-    };
+typedef union {
+    struct { float x, y, z; };
+    struct { float u, v, w; };
+    struct { float alpha, beta, gamma; };
+    float raw[3];
 } vec3f_t;
 
-typedef struct {
-    union {
-        struct { float x, y, z, w; };
-        float raw[4];
-    };
+typedef union {
+    struct { float x, y, z, w; };
+    struct { float u, v, m, n; };
+    struct { float alpha, beta, gamma, delta; };
+    float raw[4];
 } vec4f_t;
+
+typedef union {
+    uint32_t c;
+    uint8_t  argb[4];
+} color_t;
 
 typedef struct {
     vec4f_t v;  // 顶点坐标
-    vec2f_t vt; // 纹理坐标
-    vec3f_t vn; // 法向量
-    vec3i_t c ; // 颜色值
+    vec4f_t vt; // 纹理坐标
+    vec4f_t vn; // 法向量
+    color_t c ; // 颜色值
 } vertex_t;
 
 void  vectorni_add  (int *r, int *a, int *b, int n);

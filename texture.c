@@ -32,19 +32,16 @@ typedef struct {
 #pragma pack()
 
 /* º¯ÊýÊµÏÖ */
-TEXTURE* texture_init(int w, int h, int cdepth)
+TEXTURE* texture_init(int w, int h)
 {
     TEXTURE *text;
     if (w <= 0) w = 8;
     if (h <= 0) h = 8;
-    if (cdepth != 24 && cdepth != 32) cdepth = 24;
-    text = malloc(sizeof(TEXTURE) + ALIGN(w * (cdepth / 8), 4) * h);
+    text = malloc(sizeof(TEXTURE) + w * h * sizeof(uint32_t));
     if (!text) return NULL;
-    text->width  = w;
-    text->height = h;
-    text->cdepth = cdepth;
-    text->stride = ALIGN(text->width * (text->cdepth / 8), 4);
-    text->pdata  = (uint8_t*)(text + 1);
+    text->w    = w;
+    text->h    = h;
+    text->data = (uint32_t*)(text + 1);
     return text;
 }
 
@@ -55,18 +52,46 @@ TEXTURE* texture_load(char *file)
     TEXTURE      *texture= NULL;
     BMPFILEHEADER header = {0};
     FILE         *fp     = NULL;
-    int           i;
+    int           i, j;
 
     fp = fopen(file, "rb");
     if (!fp) return NULL;
 
     fread(&header, sizeof(header), 1, fp);
-    texture = texture_init(header.biWidth, header.biHeight, header.biBitCount);
+    texture = texture_init(header.biWidth, header.biHeight);
     if (texture) {
-        uint8_t *pdata = texture->pdata + texture->stride * texture->height;
-        for (i = 0; i < texture->height; i++) {
-            pdata -= texture->stride;
-            fread(pdata, texture->stride, 1, fp);
+        uint32_t *data = texture->data + texture->w * (texture->h - 1);
+        int       skip = (4 - ((header.biWidth * header.biBitCount + 7) / 8) % 4) % 4;
+        uint8_t   pal[256 * 4], c1 = 0, c2;
+        if (header.biBitCount == 4 || header.biBitCount == 8) {
+            fseek(fp, sizeof(BMPFILEHEADER), SEEK_SET);
+            fread(pal, 1, (1 << header.biBitCount) * 4, fp);
+        }
+        fseek(fp, header.bfOffBits, SEEK_SET);
+        for (i = 0; i < texture->h; i++) {
+            for (j = 0; j < texture->w; j++) {
+                uint8_t argb[4] = {};
+                switch (header.biBitCount) {
+                case 1:
+                    if (!(j & 7)) c1 = fgetc(fp);
+                    argb[0] = argb[1] = argb[2] = (c1 & (1 << 7)) ? 255 : 0;
+                    c1 <<= 1;
+                    break;
+                case 4: case 8:
+                    if (header.biBitCount == 4) {
+                        if (!(j & 1)) c1 = fgetc(fp);
+                        c2 = c1 >> 4;
+                        c1 = c1 << 4;
+                    } else c2 = fgetc(fp);
+                    argb[0] = pal[c2 * 4 + 0]; argb[1] = pal[c2 * 4 + 1]; argb[2] = pal[c2 * 4 + 2];
+                    break;
+                case 24: argb[0] = fgetc(fp); argb[1] = fgetc(fp); argb[2] = fgetc(fp); break;
+                case 32: argb[0] = fgetc(fp); argb[1] = fgetc(fp); argb[2] = fgetc(fp); argb[3] = fgetc(fp); break;
+                }
+                *data++ = *(uint32_t*)argb;
+            }
+            data -= 2 * texture->w;
+            fseek(fp, skip, SEEK_CUR);
         }
     }
 
@@ -78,62 +103,44 @@ int texture_save(TEXTURE *t, char *file)
 {
     FILE         *fp     = fopen(file, "wb");
     BMPFILEHEADER header = {0};
-    uint8_t      *pdata;
-    int           i;
+    uint8_t      *data   = NULL;
+    int           skip, i, j;
 
     if (!fp) return -1;
     header.bfType     = ('B' << 0) | ('M' << 8);
-    header.bfSize     = sizeof(header) + t->stride * t->height;
+    header.bfSize     = sizeof(header) + ALIGN(t->w * 3, 4) * t->h;
     header.bfOffBits  = sizeof(header);
     header.biSize     = 40;
-    header.biWidth    = t->width;
-    header.biHeight   = t->height;
+    header.biWidth    = t->w;
+    header.biHeight   = t->h;
     header.biPlanes   = 1;
-    header.biBitCount = t->cdepth;
-    header.biSizeImage= t->stride * t->height;
+    header.biBitCount = 24;
+    header.biSizeImage= ALIGN(t->w * 3, 4) * t->h;
     fwrite(&header, sizeof(header), 1, fp);
-    pdata = (uint8_t*)t->pdata + t->stride * t->height;
-    for (i = 0; i < t->height; i++) {
-        pdata -= t->stride;
-        fwrite(pdata, t->stride, 1, fp);
+    data = (uint8_t*)(t->data + t->w * (t->h - 1));
+    skip = (4 - (t->w * header.biBitCount / 8) % 4) % 4;
+    for (i = 0; i < t->h; i++) {
+        for (j = 0; j < t->w; j++) {
+            fputc(*data++, fp);
+            fputc(*data++, fp);
+            fputc(*data++, fp);
+            data++;
+        }
+        fseek(fp, skip, SEEK_CUR);
+        data -= 2 * t->w * sizeof(uint32_t);
     }
-
     fclose(fp);
     return 0;
 }
 
-void texture_setrgb(TEXTURE *t, int x, int y, uint8_t  r, uint8_t  g, uint8_t  b)
-{
-    if (x < 0 || y < 0 || x >= t->width || y >= t->height) return;
-    t->pdata[x * (t->cdepth / 8) + 0 + y * t->stride] = b;
-    t->pdata[x * (t->cdepth / 8) + 1 + y * t->stride] = g;
-    t->pdata[x * (t->cdepth / 8) + 2 + y * t->stride] = r;
-}
-
-void texture_getrgb(TEXTURE *t, int x, int y, uint8_t *r, uint8_t *g, uint8_t *b)
-{
-    if (x < 0 || y < 0 || x >= t->width || y >= t->height) { *r = *g = *b = 0; return; }
-    *b = t->pdata[x * (t->cdepth / 8) + 0 + y * t->stride];
-    *g = t->pdata[x * (t->cdepth / 8) + 1 + y * t->stride];
-    *r = t->pdata[x * (t->cdepth / 8) + 2 + y * t->stride];
-}
-
 void texture_setcolor(TEXTURE *t, int x, int y, uint32_t c)
 {
-    if (x < 0 || y < 0 || x >= t->width || y >= t->height) return;
-    t->pdata[x * (t->cdepth / 8) + 0 + y * t->stride] = c >> 0 ;
-    t->pdata[x * (t->cdepth / 8) + 1 + y * t->stride] = c >> 8 ;
-    t->pdata[x * (t->cdepth / 8) + 2 + y * t->stride] = c >> 16;
+    if ((unsigned)x < t->w && (unsigned)y < t->h) t->data[x + y * t->w] = c;
 }
 
 uint32_t texture_getcolor(TEXTURE *t, int x, int y)
 {
-    uint8_t r, g, b;
-    if (x < 0 || y < 0 || x >= t->width || y >= t->height) return 0;
-    b = t->pdata[x * (t->cdepth / 8) + 0 + y * t->stride];
-    g = t->pdata[x * (t->cdepth / 8) + 1 + y * t->stride];
-    r = t->pdata[x * (t->cdepth / 8) + 2 + y * t->stride];
-    return RGB(r, g, b);
+    return ((unsigned)x < t->w && (unsigned)y < t->h) ? t->data[x + y * t->w] : 0;
 }
 
 void texture_line(TEXTURE *t, int x1, int y1, int x2, int y2, uint32_t c)
@@ -166,8 +173,8 @@ void texture_line(TEXTURE *t, int x1, int y1, int x2, int y2, uint32_t c)
 void texture_bitblt(TEXTURE *dst, int dstx, int dsty, TEXTURE *src, int srcx, int srcy, int w, int h)
 {
     int  i, j;
-    w = w > 0 ? w : src->width;
-    h = h > 0 ? h : src->height;
+    w = w > 0 ? w : src->w;
+    h = h > 0 ? h : src->h;
     for (i = 0; i < h; i++) {
         for (j = 0; j < w; j++) {
             texture_setcolor(dst, dstx + j, dsty + i, texture_getcolor(src, srcx + j, srcy + i));
@@ -177,16 +184,17 @@ void texture_bitblt(TEXTURE *dst, int dstx, int dsty, TEXTURE *src, int srcx, in
 
 void texture_fillrect(TEXTURE *t, int x, int y, int w, int h, uint32_t c)
 {
-    int a = c >> 24, i, j;
-    if (a) {
-        uint8_t r = c >> 16, g = c >> 8, b = c >> 0, fr, fg, fb, br, bg, bb;
+    uint8_t *c_argb = (uint8_t*)&c;
+    int      i, j;
+    if (c_argb[3]) {
         for (i = 0; i < h; i++) {
             for (j = 0; j < w; j++) {
-                texture_getrgb(t, x + j, y + i, &br, &bg, &bb);
-                fr = r + a * (br - r) / 255;
-                fg = g + a * (bg - g) / 255;
-                fb = b + a * (bb - b) / 255;
-                texture_setrgb(t, x + j, y + i, fr, fg, fb);
+                uint32_t bc = texture_getcolor(t, x + j, y + i);
+                uint8_t *b_argb = (uint8_t*)&bc;
+                b_argb[2] = c_argb[2] + c_argb[3] * (b_argb[2] - c_argb[2]) / 255;
+                b_argb[1] = c_argb[1] + c_argb[3] * (b_argb[1] - c_argb[1]) / 255;
+                b_argb[0] = c_argb[0] + c_argb[3] * (b_argb[0] - c_argb[0]) / 255;
+                texture_setcolor(t, x + j, y + i, bc);
             }
         }
     } else {
@@ -202,7 +210,7 @@ void texture_fillrect(TEXTURE *t, int x, int y, int w, int h, uint32_t c)
 int main(int argc, char *argv[])
 {
     TEXTURE *texture1 = texture_load("test.bmp");
-    TEXTURE *texture2 = texture_load("bb.bmp"  );
+    TEXTURE *texture2 = texture_load("hmbb.bmp");
 
     texture_bitblt(texture1, 0, 0, texture2, 0, 0, -1, -1);
     texture_fillrect(texture1, 50, 50, 200, 200, RGB(0, 0, 255) | (80 << 24));

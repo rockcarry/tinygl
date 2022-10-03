@@ -68,8 +68,8 @@ void* model_load(char *fileobj, char *filetext)
     }
     model->texture = texture_load(filetext);
     if (model->texture == NULL) {
-        model->texture = texture_init(0, 0, 0);
-        texture_fillrect(model->texture, 0, 0, 8, 8, RGB(0, 255, 0));
+        model->texture = texture_init(0, 0);
+        texture_fillrect(model->texture, 0, 0, model->texture->w, model->texture->h, RGB(0, 255, 0));
     }
 
 done:

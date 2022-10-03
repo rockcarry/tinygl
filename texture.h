@@ -7,21 +7,15 @@
 
 /* BMP 对象的类型定义 */
 typedef struct {
-    int      width;   /* 宽度 */
-    int      height;  /* 高度 */
-    int      stride;  /* 行字节数 */
-    int      cdepth;  /* 像素位数 */
-    uint8_t *pdata;   /* 指向数据 */
+    int       w, h; /* 宽高 */
+    uint32_t *data; /* 指向数据 */
 } TEXTURE;
 
-TEXTURE* texture_init(int w, int h, int cdepth);
+TEXTURE* texture_init(int w, int h);
 void     texture_free(TEXTURE *t);
 
 TEXTURE* texture_load(char *file);
 int      texture_save(TEXTURE *t, char *file);
-
-void texture_setrgb(TEXTURE *t, int x, int y, uint8_t  r, uint8_t  g, uint8_t  b);
-void texture_getrgb(TEXTURE *t, int x, int y, uint8_t *r, uint8_t *g, uint8_t *b);
 
 void     texture_setcolor(TEXTURE *t, int x, int y, uint32_t c);
 uint32_t texture_getcolor(TEXTURE *t, int x, int y);

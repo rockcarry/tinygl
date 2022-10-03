@@ -42,7 +42,7 @@ static int wireframe_vertex(struct shader_common_t *sdc, vertex_t t[3])
 {
     int  i;
     perspective_vertex(sdc, t);
-    for (i = 0; i < 3; i++) texture_line(((SHADER*)sdc)->screen, t[i].v.x, t[i].v.y, t[(i + 1) % 3].v.x, t[(i + 1) % 3].v.y, RGB(sdc->color.r, sdc->color.g, sdc->color.b));
+    for (i = 0; i < 3; i++) texture_line(((SHADER*)sdc)->screen, t[i].v.x, t[i].v.y, t[(i + 1) % 3].v.x, t[(i + 1) % 3].v.y, sdc->color.c);
     return -1;
 }
 
@@ -51,9 +51,9 @@ static int randcolor_vertex(struct shader_common_t *sdc, vertex_t t[3])
     int  i;
     perspective_vertex(sdc, t);
     for (i = 0; i < 3; i++) {
-        t[i].c.r = (uint8_t)rand();
-        t[i].c.g = (uint8_t)rand();
-        t[i].c.b = (uint8_t)rand();
+        t[i].c.argb[0] = (uint8_t)rand();
+        t[i].c.argb[1] = (uint8_t)rand();
+        t[i].c.argb[2] = (uint8_t)rand();
     }
     return 0;
 }
@@ -70,9 +70,10 @@ static int flatcolor_vertex(struct shader_common_t *sdc, vertex_t t[3])
     if (intensity < 0) return -1;
     for (i = 0; i < 3; i++) {
         vec4f_t xzyw = t[i].v; matrix_mul((float*)&t[i].v, sdc->matrix_port, 4, 4, (void*)&xzyw, 4, 1);
-        t[i].c.r = intensity * sdc->color.r;
-        t[i].c.g = intensity * sdc->color.g;
-        t[i].c.b = intensity * sdc->color.b;
+        t[i].c.argb[0] = intensity * sdc->color.argb[0];
+        t[i].c.argb[1] = intensity * sdc->color.argb[1];
+        t[i].c.argb[2] = intensity * sdc->color.argb[2];
+        t[i].c.argb[3] = intensity * sdc->color.argb[3];
     }
     return 0;
 }
@@ -85,85 +86,97 @@ static int gouraud_vertex(struct shader_common_t *sdc, vertex_t t[3])
     for (i = 0; i < 3; i++) {
         intensity = vector3f_dot((float*)&t[i].vn, (float*)&sdc->light);
         if (intensity < 0) return -1;
-        t[i].c.r = intensity * sdc->color.r;
-        t[i].c.g = intensity * sdc->color.g;
-        t[i].c.b = intensity * sdc->color.b;
+        t[i].c.argb[0] = intensity * sdc->color.argb[0];
+        t[i].c.argb[1] = intensity * sdc->color.argb[1];
+        t[i].c.argb[2] = intensity * sdc->color.argb[2];
+        t[i].c.argb[3] = intensity * sdc->color.argb[3];
         xzyw = t[i].v; matrix_mul((float*)&t[i].v, sdc->matrix_port, 4, 4, (void*)&xzyw, 4, 1);
     }
     return 0;
 }
 
-static int fillcolor0_fragmt(struct shader_common_t *sdc, vertex_t t[3], vec3f_t *bc, vec3i_t *rgb) { *rgb = t[0].c; return 0; }
+static int fillcolor0_fragmt(struct shader_common_t *sdc, vertex_t t[3], vec3f_t *bc) { return t[0].c.c; }
 
-static int fillcolor1_fragmt(struct shader_common_t *sdc, vertex_t t[3], vec3f_t *bc, vec3i_t *rgb)
+static int fillcolor1_fragmt(struct shader_common_t *sdc, vertex_t t[3], vec3f_t *bc)
 {
-    rgb->r = bc->alpha * t[0].c.r + bc->beta * t[1].c.r + bc->gamma * t[2].c.r;
-    rgb->g = bc->alpha * t[0].c.g + bc->beta * t[1].c.g + bc->gamma * t[2].c.g;
-    rgb->b = bc->alpha * t[0].c.b + bc->beta * t[1].c.b + bc->gamma * t[2].c.b;
-    return 0;
+    color_t c;
+    c.argb[0] = bc->alpha * t[0].c.argb[0] + bc->beta * t[1].c.argb[0] + bc->gamma * t[2].c.argb[0];
+    c.argb[1] = bc->alpha * t[0].c.argb[1] + bc->beta * t[1].c.argb[1] + bc->gamma * t[2].c.argb[1];
+    c.argb[2] = bc->alpha * t[0].c.argb[2] + bc->beta * t[1].c.argb[2] + bc->gamma * t[2].c.argb[2];
+    c.argb[3] = bc->alpha * t[0].c.argb[3] + bc->beta * t[1].c.argb[3] + bc->gamma * t[2].c.argb[3];
+    return c.c;
 }
 
-static int phongcolor_fragmt(struct shader_common_t *sdc, vertex_t t[3], vec3f_t *bc, vec3i_t *rgb)
+static int phongcolor_fragmt(struct shader_common_t *sdc, vertex_t t[3], vec3f_t *bc)
 {
-    float intensity;
+    float   intensity;
     vec3f_t vn;
+    color_t c;
     vn.alpha = bc->alpha * t[0].vn.alpha + bc->beta * t[1].vn.alpha + bc->gamma * t[2].vn.alpha;
     vn.beta  = bc->alpha * t[0].vn.beta  + bc->beta * t[1].vn.beta  + bc->gamma * t[2].vn.beta ;
     vn.gamma = bc->alpha * t[0].vn.gamma + bc->beta * t[1].vn.gamma + bc->gamma * t[2].vn.gamma;
     intensity = vector3f_dot((float*)&vn, (float*)&sdc->light);
     if (intensity < 0) return -1;
-    rgb->r = intensity * sdc->color.r;
-    rgb->g = intensity * sdc->color.g;
-    rgb->b = intensity * sdc->color.b;
-    return 0;
+    c.argb[0] = intensity * sdc->color.argb[0];
+    c.argb[1] = intensity * sdc->color.argb[1];
+    c.argb[2] = intensity * sdc->color.argb[2];
+    c.argb[3] = intensity * sdc->color.argb[3];
+    return c.c;
 }
 
-static int normal0_fragmt(struct shader_common_t *sdc, vertex_t t[3], vec3f_t *bc, vec3i_t *rgb)
+static int normal0_fragmt(struct shader_common_t *sdc, vertex_t t[3], vec3f_t *bc)
 {
-    rgb->r = (1.0 - t[0].vn.alpha) * 0.5 * 255;
-    rgb->g = (1.0 - t[0].vn.beta ) * 0.5 * 255;
-    rgb->b = (1.0 - t[0].vn.gamma) * 0.5 * 255;
-    return 0;
+    color_t c;
+    c.argb[2] = (1.0 - t[0].vn.alpha) * 0.5 * 255;
+    c.argb[1] = (1.0 - t[0].vn.beta ) * 0.5 * 255;
+    c.argb[0] = (1.0 - t[0].vn.gamma) * 0.5 * 255;
+    c.argb[3] = (1.0 - t[0].vn.delta) * 0.5 * 255;
+    return c.c;
 }
 
-static int normal1_fragmt(struct shader_common_t *sdc, vertex_t t[3], vec3f_t *bc, vec3i_t *rgb)
+static int normal1_fragmt(struct shader_common_t *sdc, vertex_t t[3], vec3f_t *bc)
 {
-    vec3f_t vn;
+    vec4f_t vn;
+    color_t c;
     vn.alpha = bc->alpha * t[0].vn.alpha + bc->beta * t[1].vn.alpha + bc->gamma * t[2].vn.alpha;
     vn.beta  = bc->alpha * t[0].vn.beta  + bc->beta * t[1].vn.beta  + bc->gamma * t[2].vn.beta ;
     vn.gamma = bc->alpha * t[0].vn.gamma + bc->beta * t[1].vn.gamma + bc->gamma * t[2].vn.gamma;
-    rgb->r = (1.0 - vn.alpha) * 0.5 * 255;
-    rgb->g = (1.0 - vn.beta ) * 0.5 * 255;
-    rgb->b = (1.0 - vn.gamma) * 0.5 * 255;
-    return 0;
+    vn.delta = 0;
+    c.argb[2] = (1.0 - vn.alpha) * 0.5 * 255;
+    c.argb[1] = (1.0 - vn.beta ) * 0.5 * 255;
+    c.argb[0] = (1.0 - vn.gamma) * 0.5 * 255;
+    c.argb[3] = (1.0 - vn.delta) * 0.5 * 255;
+    return c.c;
 }
 
-static int texture0_fragmt(struct shader_common_t *sdc, vertex_t t[3], vec3f_t *bc, vec3i_t *rgb)
+static int texture0_fragmt(struct shader_common_t *sdc, vertex_t t[3], vec3f_t *bc)
 {
     float u = bc->alpha * t[0].vt.u + bc->beta * t[1].vt.u + bc->gamma * t[2].vt.u;
     float v = bc->alpha * t[0].vt.v + bc->beta * t[1].vt.v + bc->gamma * t[2].vt.v;
-    texture_getrgb(sdc->texture, u * sdc->texture->width, v * sdc->texture->height, (uint8_t*)&rgb->r, (uint8_t*)&rgb->g, (uint8_t*)&rgb->b);
-    return 0;
+    return texture_getcolor(sdc->texture, u * sdc->texture->w, v * sdc->texture->h);
 }
 
-static int texture1_fragmt(struct shader_common_t *sdc, vertex_t t[3], vec3f_t *bc, vec3i_t *rgb)
+static int texture1_fragmt(struct shader_common_t *sdc, vertex_t t[3], vec3f_t *bc)
 {
-    float intensity = vector3f_dot((float*)&t[0].vn, (float*)&sdc->light);
-    float u, v;
+    float   intensity = vector3f_dot((float*)&t[0].vn, (float*)&sdc->light);
+    float   u, v;
+    color_t c;
     if (intensity < 0) return -1;
     u = bc->alpha * t[0].vt.u + bc->beta * t[1].vt.u + bc->gamma * t[2].vt.u;
     v = bc->alpha * t[0].vt.v + bc->beta * t[1].vt.v + bc->gamma * t[2].vt.v;
-    texture_getrgb(sdc->texture, u * sdc->texture->width, v * sdc->texture->height, (uint8_t*)&rgb->r, (uint8_t*)&rgb->g, (uint8_t*)&rgb->b);
-    rgb->r = intensity * (uint8_t)rgb->r;
-    rgb->g = intensity * (uint8_t)rgb->g;
-    rgb->b = intensity * (uint8_t)rgb->b;
-    return 0;
+    c.c = texture_getcolor(sdc->texture, u * sdc->texture->w, v * sdc->texture->h);
+    c.argb[0] *= intensity;
+    c.argb[1] *= intensity;
+    c.argb[2] *= intensity;
+    c.argb[3] *= intensity;
+    return c.c;
 }
 
-static int texture2_fragmt(struct shader_common_t *sdc, vertex_t t[3], vec3f_t *bc, vec3i_t *rgb)
+static int texture2_fragmt(struct shader_common_t *sdc, vertex_t t[3], vec3f_t *bc)
 {
-    float intensity, u, v;
+    float   intensity, u, v;
     vec3f_t vn;
+    color_t c;
     vn.alpha = bc->alpha * t[0].vn.alpha + bc->beta * t[1].vn.alpha + bc->gamma * t[2].vn.alpha;
     vn.beta  = bc->alpha * t[0].vn.beta  + bc->beta * t[1].vn.beta  + bc->gamma * t[2].vn.beta ;
     vn.gamma = bc->alpha * t[0].vn.gamma + bc->beta * t[1].vn.gamma + bc->gamma * t[2].vn.gamma;
@@ -171,11 +184,12 @@ static int texture2_fragmt(struct shader_common_t *sdc, vertex_t t[3], vec3f_t *
     if (intensity < 0) return -1;
     u = bc->alpha * t[0].vt.u + bc->beta * t[1].vt.u + bc->gamma * t[2].vt.u;
     v = bc->alpha * t[0].vt.v + bc->beta * t[1].vt.v + bc->gamma * t[2].vt.v;
-    texture_getrgb(sdc->texture, u * sdc->texture->width, v * sdc->texture->height, (uint8_t*)&rgb->r, (uint8_t*)&rgb->g, (uint8_t*)&rgb->b);
-    rgb->r = intensity * (uint8_t)rgb->r;
-    rgb->g = intensity * (uint8_t)rgb->g;
-    rgb->b = intensity * (uint8_t)rgb->b;
-    return 0;
+    c.c = texture_getcolor(sdc->texture, u * sdc->texture->w, v * sdc->texture->h);
+    c.argb[0] *= intensity;
+    c.argb[1] *= intensity;
+    c.argb[2] *= intensity;
+    c.argb[3] *= intensity;
+    return c.c;
 }
 
 static struct {
@@ -190,7 +204,7 @@ static struct {
 };
 
 static struct {
-    char *name;      int (*fragmt)(struct shader_common_t *sdc, vertex_t t[3], vec3f_t *bc, vec3i_t *rgb);
+    char *name;      int (*fragmt)(struct shader_common_t *sdc, vertex_t t[3], vec3f_t *bc);
 } s_flist[] = {
     { "color0"     , fillcolor0_fragmt },
     { "color1"     , fillcolor1_fragmt },
@@ -208,12 +222,12 @@ void* shader_init(char *vertex, char *fragmt)
     int     i;
     SHADER *sd = calloc(1, sizeof(SHADER));
     if (!sd) return NULL;
-    sd->deftext = texture_init(0, 0, 0);
+    sd->deftext = texture_init(0, 0);
     if (!sd->deftext) { free(sd); return NULL; }
-    texture_fillrect(sd->deftext, 0, 0, 8, 8, RGB(0, 255, 0));
+    texture_fillrect(sd->deftext, 0, 0, sd->deftext->w, sd->deftext->h, RGB(0, 255, 0));
     sd->texture  = sd->deftext;
     sd->screen   = sd->deftext;
-    sd->color .g = 255;
+    sd->color .c = RGB(0, 255, 0);
     sd->light .z =  -1;
     sd->camera.z =   3;
     sd->vertex   = flatcolor_vertex;
@@ -237,14 +251,12 @@ void shader_free(void *ctx) {
 
 int shader_vertex(void *ctx, vertex_t t[3])
 {
-    SHADER *sd = (SHADER*)ctx;
-    return sd->vertex(ctx, t);
+    return ((SHADER*)ctx)->vertex(ctx, t);
 }
 
-int shader_fragment(void *ctx, vertex_t t[3], vec3f_t *bc, vec3i_t *rgb)
+int shader_fragment(void *ctx, vertex_t t[3], vec3f_t *bc)
 {
-    SHADER *sd = (SHADER*)ctx;
-    return sd->fragmt(ctx, t, bc, rgb);
+    return ((SHADER*)ctx)->fragmt(ctx, t, bc);
 }
 
 void shader_set_param(void *ctx, char *name, void *data)
@@ -257,7 +269,7 @@ void shader_set_param(void *ctx, char *name, void *data)
     else if (strcmp(name, "port"   ) == 0) memcpy(sd->matrix_port , data, sizeof(sd->matrix_port ));
     else if (strcmp(name, "screen" ) == 0) sd->screen = data;
     else if (strcmp(name, "texture") == 0) sd->texture= data;
-    else if (strcmp(name, "color"  ) == 0) sd->color  =*(vec3i_t*)data;
+    else if (strcmp(name, "color"  ) == 0) sd->color  =*(color_t*)data;
     else if (strcmp(name, "light"  ) == 0) sd->light  =*(vec3f_t*)data;
     else if (strcmp(name, "camera" ) == 0) {
         sd->camera = *(vec3f_t*)data;
