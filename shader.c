@@ -192,8 +192,8 @@ static struct {
 static struct {
     char *name;      int (*fragmt)(struct shader_common_t *sdc, vertex_t t[3], vec3f_t *bc, vec3i_t *rgb);
 } s_flist[] = {
-    { "fillcolor0" , fillcolor0_fragmt },
-    { "fillcolor1" , fillcolor1_fragmt },
+    { "color0"     , fillcolor0_fragmt },
+    { "color1"     , fillcolor1_fragmt },
     { "phong"      , phongcolor_fragmt },
     { "normal0"    , normal0_fragmt    },
     { "normal1"    , normal1_fragmt    },
@@ -208,7 +208,7 @@ void* shader_init(char *vertex, char *fragmt)
     int     i;
     SHADER *sd = calloc(1, sizeof(SHADER));
     if (!sd) return NULL;
-    sd->deftext = texture_create(8, 8, 24);
+    sd->deftext = texture_init(0, 0, 0);
     if (!sd->deftext) { free(sd); return NULL; }
     texture_fillrect(sd->deftext, 0, 0, 8, 8, RGB(0, 255, 0));
     sd->texture  = sd->deftext;
@@ -230,7 +230,7 @@ void* shader_init(char *vertex, char *fragmt)
 void shader_free(void *ctx) {
     SHADER *sd = (SHADER*)ctx;
     if (sd) {
-        texture_destroy(sd->deftext);
+        texture_free(sd->deftext);
         free(sd);
     }
 }

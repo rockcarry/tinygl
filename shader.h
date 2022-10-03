@@ -22,7 +22,7 @@ typedef struct shader_common_t {
 } SHADER_COMMON;
 
 void* shader_init(char *vertex, char *fragmt);
-void  shader_free(void *ctx );
+void  shader_free(void *ctx);
 
 int   shader_vertex  (void *ctx, vertex_t t[3]);
 int   shader_fragment(void *ctx, vertex_t t[3], vec3f_t *bc, vec3i_t *rgb);

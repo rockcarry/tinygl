@@ -32,9 +32,11 @@ typedef struct {
 #pragma pack()
 
 /* º¯ÊýÊµÏÖ */
-TEXTURE* texture_create(int w, int h, int cdepth)
+TEXTURE* texture_init(int w, int h, int cdepth)
 {
     TEXTURE *text;
+    if (w <= 0) w = 8;
+    if (h <= 0) h = 8;
     if (cdepth != 24 && cdepth != 32) cdepth = 24;
     text = malloc(sizeof(TEXTURE) + ALIGN(w * (cdepth / 8), 4) * h);
     if (!text) return NULL;
@@ -46,7 +48,7 @@ TEXTURE* texture_create(int w, int h, int cdepth)
     return text;
 }
 
-void texture_destroy(TEXTURE *t) { free(t); }
+void texture_free(TEXTURE *t) { free(t); }
 
 TEXTURE* texture_load(char *file)
 {
@@ -59,7 +61,7 @@ TEXTURE* texture_load(char *file)
     if (!fp) return NULL;
 
     fread(&header, sizeof(header), 1, fp);
-    texture = texture_create(header.biWidth, header.biHeight, header.biBitCount);
+    texture = texture_init(header.biWidth, header.biHeight, header.biBitCount);
     if (texture) {
         uint8_t *pdata = texture->pdata + texture->stride * texture->height;
         for (i = 0; i < texture->height; i++) {
@@ -205,8 +207,8 @@ int main(int argc, char *argv[])
     texture_bitblt(texture1, 0, 0, texture2, 0, 0, -1, -1);
     texture_fillrect(texture1, 50, 50, 200, 200, RGB(0, 0, 255) | (80 << 24));
     texture_save(texture1, "out.bmp");
-    texture_destroy(texture1);
-    texture_destroy(texture2);
+    texture_free(texture1);
+    texture_free(texture2);
     return 0;
 }
 #endif

@@ -12,6 +12,7 @@ typedef struct {
     TEXTURE *screen;
     float   *zbuffer;
     void    *shader;
+    void    *defshd;
 } TINYGL;
 
 static void clearzbuffer(TINYGL *gl)
@@ -25,12 +26,12 @@ void* tinygl_init(int w, int h, void *shader)
     TINYGL *gl = malloc(sizeof(TINYGL) + w * h * sizeof(float));
     if (!gl) goto failed;
 
-    gl->screen = texture_create(w, h, 24);
-    if (!gl->screen) goto failed;
+    gl->screen = texture_init(w, h, 0);
+    gl->defshd = shader_init (NULL, NULL);
+    if (!gl->screen || !gl->defshd) goto failed;
 
-    gl->zbuffer = (float*)(gl + 1);
-    gl->shader  = shader;
-    clearzbuffer(gl);
+    gl->zbuffer = (float*)(gl + 1); clearzbuffer(gl);
+    gl->shader  = shader ? shader : gl->defshd;
     tinygl_set_viewport(gl, 0, 0, w, h, 255);
     return gl;
 
@@ -43,7 +44,8 @@ void tinygl_free(void *ctx)
 {
     TINYGL *gl = (TINYGL*)ctx;
     if (gl) {
-        texture_destroy(gl->screen);
+        shader_free (gl->defshd);
+        texture_free(gl->screen);
         free(gl);
     }
 }
@@ -57,7 +59,7 @@ void tinygl_draw(void *ctx, void *model)
     nface = model_get_face(model, -1, NULL);
     for (i = 0; i < nface; i++) {
         model_get_face(model, i, triangle);
-        if (shader_vertex(gl->shader, triangle) == 0) draw_triangle (gl->screen, gl->zbuffer, gl->shader, triangle);
+        if (shader_vertex(gl->shader, triangle) == 0) draw_triangle(gl->screen, gl->zbuffer, gl->shader, triangle);
     }
 }
 
@@ -108,17 +110,14 @@ void* tinygl_get_param(void *ctx, char *name)
 #ifdef _TEST_TINYGL_
 int main(void)
 {
-    void *shader = shader_init("flat", "normal0");
-    void *tinygl = tinygl_init(1024, 1024, shader);
+    void *tinygl = tinygl_init(1024, 1024, NULL);
     void *model  = model_load ("head.obj", "head.bmp");
 
-    tinygl_set_param(tinygl, "texture", model_get_texture(model));
     tinygl_draw(tinygl, model);
     tinygl_set_param(tinygl, "savescreen", "out.bmp");
 
     model_free (model );
     tinygl_free(tinygl);
-    shader_free(shader);
     return 0;
 }
 #endif

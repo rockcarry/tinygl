@@ -14,8 +14,8 @@ typedef struct {
     uint8_t *pdata;   /* 指向数据 */
 } TEXTURE;
 
-TEXTURE* texture_create(int w, int h, int cdepth);
-void     texture_destroy(TEXTURE *t);
+TEXTURE* texture_init(int w, int h, int cdepth);
+void     texture_free(TEXTURE *t);
 
 TEXTURE* texture_load(char *file);
 int      texture_save(TEXTURE *t, char *file);

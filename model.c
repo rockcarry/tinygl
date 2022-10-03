@@ -68,7 +68,7 @@ void* model_load(char *fileobj, char *filetext)
     }
     model->texture = texture_load(filetext);
     if (model->texture == NULL) {
-        model->texture = texture_create(8, 8, 24);
+        model->texture = texture_init(0, 0, 0);
         texture_fillrect(model->texture, 0, 0, 8, 8, RGB(0, 255, 0));
     }
 
@@ -81,7 +81,7 @@ void model_free(void *ctx)
 {
     MODEL *model = (MODEL*)ctx;
     if (model) {
-        texture_destroy(model->texture);
+        texture_free(model->texture);
         free(ctx);
     }
 }
