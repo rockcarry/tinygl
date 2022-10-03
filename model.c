@@ -128,9 +128,9 @@ int model_get_face(void *ctx, int idx, vertex_t face[3])
         face[i].v .w     = 1;
         face[i].vt.u     = model->lst_vt[(model->lst_f[idx].vt[i] - 1) % model->num_vt].u;
         face[i].vt.v     = model->lst_vt[(model->lst_f[idx].vt[i] - 1) % model->num_vt].v;
-        face[i].vn.alpha = model->lst_vn[(model->lst_f[idx].vn[i] - 1) % model->num_vn].alpha;
-        face[i].vn.beta  = model->lst_vn[(model->lst_f[idx].vn[i] - 1) % model->num_vn].beta;
-        face[i].vn.gamma = model->lst_vn[(model->lst_f[idx].vn[i] - 1) % model->num_vn].gamma;
+        face[i].vn.alpha =-model->lst_vn[(model->lst_f[idx].vn[i] - 1) % model->num_vn].alpha;
+        face[i].vn.beta  =-model->lst_vn[(model->lst_f[idx].vn[i] - 1) % model->num_vn].beta;
+        face[i].vn.gamma =-model->lst_vn[(model->lst_f[idx].vn[i] - 1) % model->num_vn].gamma;
     }
     return 0;
 }

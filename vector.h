@@ -56,10 +56,6 @@ typedef struct {
     vec3i_t c ; // 颜色值
 } vertex_t;
 
-typedef struct {
-    vertex_t v[3];
-} triangle_t;
-
 void  vectorni_add  (int *r, int *a, int *b, int n);
 void  vectorni_sub  (int *r, int *a, int *b, int n);
 void  vectorni_mul  (int *r, int *a, int  k, int n);
@@ -77,13 +73,13 @@ void  vectornf_norm (float *a, int n);
 
 #define vector3i_add(r, a, b)   vectorni_add(r, a, b, 3)
 #define vector3i_sub(r, a, b)   vectorni_sub(r, a, b, 3)
-#define vector3i_mul(r, a, k)   vectorni_add(r, a, k, 3)
+#define vector3i_mul(r, a, k)   vectorni_mul(r, a, k, 3)
 #define vector3i_dot(a, b)      vectorni_dot(a, b, 3)
 #define vector3i_abs(a)         vectorni_abs(a, 3)
 
 #define vector3f_add(r, a, b)   vectornf_add(r, a, b, 3)
 #define vector3f_sub(r, a, b)   vectornf_sub(r, a, b, 3)
-#define vector3f_mul(r, a, k)   vectornf_add(r, a, k, 3)
+#define vector3f_mul(r, a, k)   vectornf_mul(r, a, k, 3)
 #define vector3f_dot(a, b)      vectornf_dot(a, b, 3)
 #define vector3f_abs(a)         vectornf_abs(a, 3)
 #define vector3f_norm(a)        vectornf_norm(a, 3)

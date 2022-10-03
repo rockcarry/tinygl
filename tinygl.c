@@ -108,10 +108,11 @@ void* tinygl_get_param(void *ctx, char *name)
 #ifdef _TEST_TINYGL_
 int main(void)
 {
-    void *shader = shader_init(NULL, NULL);
+    void *shader = shader_init("flat", "normal0");
     void *tinygl = tinygl_init(1024, 1024, shader);
     void *model  = model_load ("head.obj", "head.bmp");
 
+    tinygl_set_param(tinygl, "texture", model_get_texture(model));
     tinygl_draw(tinygl, model);
     tinygl_set_param(tinygl, "savescreen", "out.bmp");
 

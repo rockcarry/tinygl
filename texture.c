@@ -137,7 +137,6 @@ uint32_t texture_getcolor(TEXTURE *t, int x, int y)
 void texture_line(TEXTURE *t, int x1, int y1, int x2, int y2, uint32_t c)
 {
     int dx, dy, d, e;
-
     dx = abs(x1 - x2);
     dy = abs(y1 - y2);
 
