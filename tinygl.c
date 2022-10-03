@@ -110,14 +110,29 @@ void* tinygl_get_param(void *ctx, char *name)
 #ifdef _TEST_TINYGL_
 int main(void)
 {
-    void *shader = shader_init("perspective", "normal1");
+    struct {
+        char *file_obj;
+        char *file_text;
+        void *model;
+    } s_model_list[] = {
+        { "model/head.obj"          , "model/head.bmp"           },
+        { "model/head_eye_inner.obj", "model/head_eye_inner.bmp" },
+        { "model/head_eye_outer.obj", "model/head_eye_inner.bmp" },
+        { NULL                      , NULL                       },
+    };
+    void *shader = shader_init("flat", "color0");
     void *tinygl = tinygl_init(1024, 1024, shader);
-    void *model  = model_load ("head.obj", "head.bmp");
+    int   i;
 
-    tinygl_draw(tinygl, model);
+    for (i = 0; s_model_list[i].file_obj; i++) {
+        s_model_list[i].model = model_load(s_model_list[i].file_obj, s_model_list[i].file_text);
+        tinygl_set_param(tinygl, "texture", model_get_texture(s_model_list[i].model));
+        tinygl_draw(tinygl, s_model_list[i].model);
+        model_free(s_model_list[i].model);
+        s_model_list[i].model = NULL;
+    }
+
     tinygl_set_param(tinygl, "savescreen", "out.bmp");
-
-    model_free (model );
     tinygl_free(tinygl);
     shader_free(shader);
     return 0;
