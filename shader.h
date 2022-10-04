@@ -4,30 +4,24 @@
 #include "matrix.h"
 #include "texture.h"
 
-struct shader_common_t;
+typedef struct shader_t {
+    float    matrix_model[4 * 4];
+    float    matrix_view [4 * 4];
+    float    matrix_proj [4 * 4];
+    float    matrix_port [4 * 4];
+    vec3f_t  light, camera;
+    TEXTURE *target;
+    TEXTURE *texture;
+    TEXTURE *deftext;
+    color_t  color;
+    int (*vertex)(struct shader_t *sdc, vertex_t t[3]);
+    int (*fragmt)(struct shader_t *sdc, vertex_t t[3], vec3f_t *bc);
+} SHADER;
 
-#define SHADER_COMMON_MEMBERS \
-    float    matrix_model[4 * 4]; \
-    float    matrix_view [4 * 4]; \
-    float    matrix_proj [4 * 4]; \
-    float    matrix_port [4 * 4]; \
-    vec3f_t  light, camera;       \
-    TEXTURE *texture;             \
-    color_t  color ;              \
-    int (*vertex)(struct shader_common_t *sdc, vertex_t t[3]); \
-    int (*fragmt)(struct shader_common_t *sdc, vertex_t t[3], vec3f_t *bc);
+SHADER* shader_init(char *vertex, char *fragmt);
+void    shader_free(SHADER *sd);
 
-typedef struct shader_common_t {
-    SHADER_COMMON_MEMBERS
-} SHADER_COMMON;
-
-void* shader_init(char *vertex, char *fragmt);
-void  shader_free(void *ctx);
-
-int   shader_vertex  (void *ctx, vertex_t t[3]);
-int   shader_fragment(void *ctx, vertex_t t[3], vec3f_t *bc);
-
-void  shader_set_param(void *ctx, char *name, void *data);
-void* shader_get_param(void *ctx, char *name);
+void  shader_set_param(SHADER *sd, char *name, void *data);
+void* shader_get_param(SHADER *sd, char *name);
 
 #endif

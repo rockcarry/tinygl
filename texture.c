@@ -1,12 +1,8 @@
-#include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include "defines.h"
 #include "texture.h"
-
-#define ALIGN(a, b) (((a) + (b) - 1) & ~((b) - 1))
-#define MAX(a, b)   ((a) > (b) ? (a) : (b))
-#define MIN(a, b)   ((a) < (b) ? (a) : (b))
 
 //++ for bmp file ++//
 // 内部类型定义
@@ -132,6 +128,9 @@ int texture_save(TEXTURE *t, char *file)
     fclose(fp);
     return 0;
 }
+
+void texture_lock  (TEXTURE *t) { if (t && t->lock  ) t->lock  (t); }
+void texture_unlock(TEXTURE *t) { if (t && t->unlock) t->unlock(t); }
 
 void texture_setcolor(TEXTURE *t, int x, int y, uint32_t c)
 {

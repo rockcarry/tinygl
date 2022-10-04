@@ -3,12 +3,16 @@
 
 #include <stdint.h>
 
+#ifndef RGB
 #define RGB(r, g, b) (((unsigned)(r) << 16) | ((unsigned)(g) << 8) | ((unsigned)(b) << 0))
+#endif
 
 /* BMP 对象的类型定义 */
-typedef struct {
+typedef struct texture_t {
     int       w, h; /* 宽高 */
     uint32_t *data; /* 指向数据 */
+    void (*lock  )(struct texture_t *t);
+    void (*unlock)(struct texture_t *t);
 } TEXTURE;
 
 TEXTURE* texture_init(int w, int h);
@@ -16,6 +20,9 @@ void     texture_free(TEXTURE *t);
 
 TEXTURE* texture_load(char *file);
 int      texture_save(TEXTURE *t, char *file);
+
+void     texture_lock  (TEXTURE *t);
+void     texture_unlock(TEXTURE *t);
 
 void     texture_setcolor(TEXTURE *t, int x, int y, uint32_t c);
 uint32_t texture_getcolor(TEXTURE *t, int x, int y);

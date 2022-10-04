@@ -1,5 +1,4 @@
 #include <stdlib.h>
-#include <stdio.h>
 #include <string.h>
 #include <float.h>
 #include "matrix.h"
@@ -9,30 +8,40 @@
 #include "tinygl.h"
 
 typedef struct {
-    TEXTURE *screen;
+    TEXTURE *target;
+    TEXTURE *deftgt;
+    SHADER  *shader;
+    SHADER  *defshd;
     float   *zbuffer;
-    void    *shader;
-    void    *defshd;
 } TINYGL;
 
-static void clearzbuffer(TINYGL *gl)
+static int reinitzbuffer(TINYGL *gl, int zw, int zh)
 {
-    int i, n = gl->screen->w * gl->screen->h;
+    float *newzbuf = NULL;
+    int    i, n;
+    if (!gl->zbuffer || zw != gl->target->w || zh != gl->target->h) {
+        newzbuf = malloc(zw * zh * sizeof(float));
+        if (!newzbuf) return -1;
+        free(gl->zbuffer);
+        gl->zbuffer = newzbuf;
+    }
+    n = zw * zh;
     for (i = 0; i < n; i++) gl->zbuffer[i] = -FLT_MAX;
+    return 0;
 }
 
-void* tinygl_init(int w, int h, void *shader)
+void* tinygl_init(int w, int h)
 {
-    TINYGL *gl = malloc(sizeof(TINYGL) + w * h * sizeof(float));
+    TINYGL *gl = calloc(1, sizeof(TINYGL));
     if (!gl) goto failed;
 
-    gl->screen = texture_init(w, h);
+    gl->deftgt = texture_init(w, h);
     gl->defshd = shader_init (NULL, NULL);
-    if (!gl->screen || !gl->defshd) goto failed;
-
-    gl->zbuffer = (float*)(gl + 1); clearzbuffer(gl);
-    gl->shader  = shader ? shader : gl->defshd;
-    tinygl_set_viewport(gl, 0, 0, w, h, 255);
+    if (!gl->deftgt || !gl->defshd) goto failed;
+    gl->target = gl->deftgt;
+    gl->shader = gl->defshd;
+    if (reinitzbuffer(gl, gl->target->w, gl->target->h) != 0) goto failed;
+    tinygl_viewport(gl, 0, 0, w, h, 255);
     return gl;
 
 failed:
@@ -44,10 +53,23 @@ void tinygl_free(void *ctx)
 {
     TINYGL *gl = (TINYGL*)ctx;
     if (gl) {
+        texture_free(gl->deftgt);
         shader_free (gl->defshd);
-        texture_free(gl->screen);
+        free(gl->zbuffer);
         free(gl);
     }
+}
+
+void tinygl_begin(void *ctx)
+{
+    TINYGL *gl = (TINYGL*)ctx;
+    if (gl) texture_lock(gl->target);
+}
+
+void tinygl_end(void *ctx)
+{
+    TINYGL *gl = (TINYGL*)ctx;
+    if (gl) texture_unlock(gl->target);
 }
 
 void tinygl_draw(void *ctx, void *model)
@@ -59,7 +81,7 @@ void tinygl_draw(void *ctx, void *model)
     nface = model_get_face(model, -1, NULL);
     for (i = 0; i < nface; i++) {
         model_get_face(model, i, triangle);
-        if (shader_vertex(gl->shader, triangle) == 0) draw_triangle(gl->screen, gl->zbuffer, gl->shader, triangle);
+        if (gl->shader->vertex(gl->shader, triangle) == 0) draw_triangle(gl->target, gl->zbuffer, gl->shader, triangle);
     }
 }
 
@@ -67,17 +89,17 @@ void tinygl_clear(void *ctx, char *type)
 {
     TINYGL *gl = (TINYGL*)ctx;
     if (!ctx) return;
-    if (strcmp(type, "screen") == 0) {
-        texture_fillrect(gl->screen, 0, 0, gl->screen->w, gl->screen->h, 0);
+    if (strcmp(type, "framebuf") == 0) {
+        texture_fillrect(gl->target, 0, 0, gl->target->w, gl->target->h, 0);
     } else if (strcmp(type, "zbuffer") == 0) {
-        clearzbuffer(gl);
+        reinitzbuffer(gl, gl->target->w, gl->target->h);
     }
 }
 
-void tinygl_set_viewport(void *ctx, int x, int y, int w, int h, int depth)
+void tinygl_viewport(void *ctx, int x, int y, int w, int h, int depth)
 {
     if (ctx) {
-        float *matrix = tinygl_get_param(ctx, "port");
+        float *matrix = tinygl_get(ctx, "shader.port");
         matrix_identity(matrix , 4);
         matrix[0 * 4 + 3] = (float)x + w / 2.0;
         matrix[1 * 4 + 3] = (float)y + h / 2.0;
@@ -88,26 +110,32 @@ void tinygl_set_viewport(void *ctx, int x, int y, int w, int h, int depth)
     }
 }
 
-void tinygl_set_param(void *ctx, char *name, void *data)
+void tinygl_set(void *ctx, char *name, void *data)
 {
     TINYGL *gl = (TINYGL*)ctx;
-    if (!ctx || !name) return;
-    if      (strcmp(name, "shader"    ) == 0) gl->shader = data;
-    else if (strcmp(name, "savescreen") == 0) texture_save(gl->screen, data);
-    else shader_set_param(gl->shader, name, data);
+    if (!ctx || !name || !data) return;
+    if      (strcmp(name, "shader" ) == 0   ) gl->shader = data;
+    else if (strcmp(name, "target" ) == 0   ) {
+        if (reinitzbuffer(gl, ((TEXTURE*)data)->w, ((TEXTURE*)data)->h) == 0) {
+            gl->target = data; tinygl_viewport(gl, 0, 0, gl->target->w, gl->target->h, 255);
+        }
+    }
+    else if (strstr(name, "shader.") == name) shader_set_param(gl->shader, name + 7, data);
+    else if (strcmp(name, "save"   ) == 0   ) texture_save(gl->target, data);
 }
 
-void* tinygl_get_param(void *ctx, char *name)
+void* tinygl_get(void *ctx, char *name)
 {
     TINYGL *gl = (TINYGL*)ctx;
     if (!ctx || !name) return NULL;
-    if      (strcmp(name, "shader") == 0) return gl->shader;
-    else if (strcmp(name, "screen") == 0) return gl->screen;
-    else return shader_get_param(ctx ? ((TINYGL*)ctx)->shader : NULL, name);
+    if      (strcmp(name, "shader" ) == 0   ) return gl->shader;
+    else if (strcmp(name, "target" ) == 0   ) return gl->target;
+    else if (strstr(name, "shader.") == name) return shader_get_param(gl->shader, name + 7);
     return NULL;
 }
 
 #ifdef _TEST_TINYGL_
+#include "wingdi.h"
 int main(void)
 {
     struct {
@@ -120,21 +148,24 @@ int main(void)
         { "model/head_eye_outer.obj", "model/head_eye_inner.bmp" },
         { NULL                      , NULL                       },
     };
-    void *shader = shader_init("flat", "color0");
-    void *tinygl = tinygl_init(1024, 1024, shader);
+    void *wingdi = wingdi_init(800, 800);
+    void *tinygl = tinygl_init(0  , 0  );
     int   i;
 
+    tinygl_set(tinygl, "target", wingdi_get(wingdi, "texture"));
+    tinygl_begin(tinygl);
     for (i = 0; s_model_list[i].file_obj; i++) {
         s_model_list[i].model = model_load(s_model_list[i].file_obj, s_model_list[i].file_text);
-        tinygl_set_param(tinygl, "texture", model_get_texture(s_model_list[i].model));
+        tinygl_set (tinygl, "shader.texture", model_get_texture(s_model_list[i].model));
         tinygl_draw(tinygl, s_model_list[i].model);
         model_free(s_model_list[i].model);
         s_model_list[i].model = NULL;
     }
+    tinygl_end(tinygl);
 
-    tinygl_set_param(tinygl, "savescreen", "out.bmp");
+    tinygl_set (tinygl, "save", "out.bmp");
     tinygl_free(tinygl);
-    shader_free(shader);
+    wingdi_free(wingdi, 0);
     return 0;
 }
 #endif

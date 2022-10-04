@@ -1,5 +1,3 @@
-#include <stdlib.h>
-#include <stdio.h>
 #include <math.h>
 #include "triangle.h"
 
@@ -13,7 +11,7 @@ static void barycentric(vertex_t v[3], int x, int y, vec3f_t *bc)
     bc->gamma = vs.x / vs.z;
 }
 
-void draw_triangle(TEXTURE *dst, float *zbuf, void *shader, vertex_t v[3])
+void draw_triangle(TEXTURE *target, float *zbuf, SHADER *shader, vertex_t v[3])
 {
     int   iminx, iminy, imaxx, imaxy, c, i, j;
     float fminx, fminy, fmaxx, fmaxy, z;
@@ -24,8 +22,8 @@ void draw_triangle(TEXTURE *dst, float *zbuf, void *shader, vertex_t v[3])
         if (fminy > v[i].v.y) fminy = v[i].v.y;
         if (fmaxy < v[i].v.y) fmaxy = v[i].v.y;
     }
-    if (fmaxx > dst->w - 1) fmaxx = dst->w - 1;
-    if (fmaxy > dst->h - 1) fmaxy = dst->h - 1;
+    if (fmaxx > target->w - 1) fmaxx = target->w - 1;
+    if (fmaxy > target->h - 1) fmaxy = target->h - 1;
     if (fminx < 0) fminx = 0;
     if (fminy < 0) fminy = 0;
 
@@ -34,10 +32,10 @@ void draw_triangle(TEXTURE *dst, float *zbuf, void *shader, vertex_t v[3])
             vec3f_t bc; barycentric(v, j, i, &bc);
             if (bc.alpha < 0 || bc.beta < 0 || bc.gamma < 0) continue;
             z = bc.alpha * v[0].v.z + bc.beta * v[1].v.z + bc.gamma * v[2].v.z;
-            if (zbuf[j + i * dst->w] < z) {
-                if ((c = shader_fragment(shader, v, &bc)) != -1) {
-                    texture_setcolor(dst, j, i, c);
-                    zbuf[j + i * dst->w] = z;
+            if (zbuf[j + i * target->w] < z) {
+                if ((c = shader->fragmt(shader, v, &bc)) != -1) {
+                    texture_setcolor(target, j, i, c);
+                    zbuf[j + i * target->w] = z;
                 }
             }
         }
