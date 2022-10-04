@@ -120,7 +120,7 @@ static TEXTURE* texture_load_tga(char *file)
     uint32_t      pal[256], val32 = 0;
     uint16_t      val16;
     uint8_t       hpkt, r, g, b;
-    int           n, i, j;
+    int           n, i, j, x, y;
 
     fp = fopen(file, "rb");
     if (!fp) return NULL;
@@ -169,7 +169,11 @@ static TEXTURE* texture_load_tga(char *file)
                         b = (val32 << 3) & 0xF8;
                         val32 = RGB(r, g, b);
                     }
-                    texture_setcolor(texture, i % texture->w, texture->h - i / texture->w - 1, val32);
+                    x = i % texture->w;
+                    x = header.ImageDesc & (1 << 4) ? texture->w - 1 - x : x;
+                    y = i / texture->w;
+                    y = header.ImageDesc & (1 << 5) ? texture->h - 1 - y : y;
+                    texture_setcolor(texture, x, y, val32);
                 }
             }
             break;

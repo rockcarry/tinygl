@@ -143,9 +143,9 @@ int main(void)
         char *file_text;
         void *model;
     } s_model_list[] = {
-        { "model/head.obj"          , "model/head.bmp"           },
-        { "model/head_eye_inner.obj", "model/head_eye_inner.bmp" },
-        { "model/head_eye_outer.obj", "model/head_eye_inner.bmp" },
+        { "model/head.obj"          , "model/head.tga"           },
+        { "model/head_eye_inner.obj", "model/head_eye_inner.tga" },
+        { "model/head_eye_outer.obj", "model/head_eye_inner.tga" },
         { NULL                      , NULL                       },
     };
     void *wingdi = wingdi_init(800, 800);
@@ -153,6 +153,8 @@ int main(void)
     int   i;
 
     tinygl_set(tinygl, "target", wingdi_get(wingdi, "texture"));
+    tinygl_set(tinygl, "shader.vertex", "perspective");
+    tinygl_set(tinygl, "shader.fragmt", "texture2"   );
     tinygl_begin(tinygl);
     for (i = 0; s_model_list[i].file_obj; i++) {
         s_model_list[i].model = model_load(s_model_list[i].file_obj, s_model_list[i].file_text);
