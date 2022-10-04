@@ -27,6 +27,23 @@ typedef struct {
 } BMPFILEHEADER;
 #pragma pack()
 
+#pragma pack(1)
+typedef struct {
+    uint8_t   IDLength;
+    uint8_t   ColorMapType;
+    uint8_t   ImageType;
+    uint16_t  CMapStart;
+    uint16_t  CMapLength;
+    uint8_t   CMapDepth;
+    uint16_t  XOffset;
+    uint16_t  YOffset;
+    uint16_t  Width;
+    uint16_t  Height;
+    uint8_t   PixelDepth;
+    uint8_t   ImageDesc;
+} TGAFILEHEADER;
+#pragma pack()
+
 /* º¯ÊýÊµÏÖ */
 TEXTURE* texture_init(int w, int h)
 {
@@ -43,7 +60,7 @@ TEXTURE* texture_init(int w, int h)
 
 void texture_free(TEXTURE *t) { free(t); }
 
-TEXTURE* texture_load(char *file)
+static TEXTURE* texture_load_bmp(char *file)
 {
     TEXTURE      *texture= NULL;
     BMPFILEHEADER header = {0};
@@ -95,7 +112,75 @@ TEXTURE* texture_load(char *file)
     return texture;
 }
 
-int texture_save(TEXTURE *t, char *file)
+static TEXTURE* texture_load_tga(char *file)
+{
+    TEXTURE      *texture= NULL;
+    TGAFILEHEADER header = {0};
+    FILE         *fp     = NULL;
+    uint32_t      pal[256], val32 = 0;
+    uint16_t      val16;
+    uint8_t       hpkt, r, g, b;
+    int           n, i, j;
+
+    fp = fopen(file, "rb");
+    if (!fp) return NULL;
+
+    fread(&header, sizeof(header), 1, fp);
+    texture = texture_init(header.Width, header.Height);
+    if (texture) {
+        if (header.ColorMapType) {
+            fseek(fp, header.CMapStart, SEEK_SET);
+            n = MIN(header.CMapLength, 256);
+            for (i = 0; i < n; i++) {
+                switch (header.CMapDepth) {
+                case 16:
+                    fread(&val16, sizeof(val16), 1, fp);
+                    r = (val32 >> 8) & 0xF8;
+                    g = (val32 >> 3) & 0xFC;
+                    b = (val32 << 3) & 0xF8;
+                    pal[i] = RGB(r, g, b);
+                    break;
+                case 24:
+                    r = fgetc(fp);
+                    g = fgetc(fp);
+                    b = fgetc(fp);
+                    pal[i] = RGB(r, g, b);
+                    break;
+                case 32:
+                    fread(pal + i, sizeof(uint32_t), 1, fp);
+                    break;
+                }
+            }
+        }
+        fseek(fp, sizeof(header) + header.IDLength + (!!header.ColorMapType) * header.CMapLength * header.CMapDepth / 8, SEEK_SET);
+        if (header.PixelDepth > 32) header.PixelDepth = 32;
+        switch (header.ImageType) {
+        case 1: case 9: case 2: case 10:
+            for (n = texture->w * texture->h, i = 0; i < n && !feof(fp); ) {
+                hpkt = (header.ImageType == 9 || header.ImageType == 10) ? fgetc(fp) : 0;
+                if (hpkt & (1 << 7)) fread(&val32, header.PixelDepth / 8, 1, fp);
+                for (j = 0; j < (hpkt & 0x7F) + 1; j++, i++) {
+                    if (!(hpkt & (1 << 7))) fread(&val32, header.PixelDepth / 8, 1, fp);
+                    if (header.ImageType == 1 || header.ImageType == 9) {
+                        val32 = pal[val32 % 256];
+                    } else if (header.PixelDepth == 16) {
+                        r = (val32 >> 8) & 0xF8;
+                        g = (val32 >> 3) & 0xFC;
+                        b = (val32 << 3) & 0xF8;
+                        val32 = RGB(r, g, b);
+                    }
+                    texture_setcolor(texture, i % texture->w, texture->h - i / texture->w - 1, val32);
+                }
+            }
+            break;
+        }
+    }
+
+    fclose(fp);
+    return texture;
+}
+
+static int texture_save_bmp(TEXTURE *t, char *file)
 {
     FILE         *fp     = fopen(file, "wb");
     BMPFILEHEADER header = {0};
@@ -129,6 +214,54 @@ int texture_save(TEXTURE *t, char *file)
     return 0;
 }
 
+static int texture_save_tga(TEXTURE *t, char *file)
+{
+    FILE         *fp     = fopen(file, "wb");
+    TGAFILEHEADER header = {0};
+    uint32_t     *data;
+    int           i, j;
+
+    if (!fp) return -1;
+    header.ImageType  = 2;
+    header.Width      = t->w;
+    header.Height     = t->h;
+    header.PixelDepth = 24;
+    fwrite(&header, sizeof(header), 1, fp);
+    data = t->data + t->w * (t->h - 1);
+    for (i = 0; i < t->h; i++) {
+        for (j = 0; j < t->w; j++) {
+            fputc(data[j] >> 0, fp);
+            fputc(data[j] >> 8, fp);
+            fputc(data[j] >>16, fp);
+        }
+        data -= t->w;
+    }
+    fclose(fp);
+    return 0;
+}
+
+TEXTURE* texture_load(char *file)
+{
+    if (file) {
+        int   len     = strlen(file);
+        char *postfix = file + MAX(len - 4, 0);
+        if (strcasecmp(postfix, ".bmp") == 0) return texture_load_bmp(file);
+        if (strcasecmp(postfix, ".tga") == 0) return texture_load_tga(file);
+    }
+    return NULL;
+}
+
+int texture_save(TEXTURE *t, char *file)
+{
+    if (t && file) {
+        int   len     = strlen(file);
+        char *postfix = file + MAX(len - 4, 0);
+        if (strcasecmp(postfix, ".bmp") == 0) return texture_save_bmp(t, file);
+        if (strcasecmp(postfix, ".tga") == 0) return texture_save_tga(t, file);
+    }
+    return -1;
+}
+
 void texture_lock  (TEXTURE *t) { if (t && t->lock  ) t->lock  (t); }
 void texture_unlock(TEXTURE *t) { if (t && t->unlock) t->unlock(t); }
 
@@ -145,9 +278,10 @@ uint32_t texture_getcolor(TEXTURE *t, int x, int y)
 void texture_line(TEXTURE *t, int x1, int y1, int x2, int y2, uint32_t c)
 {
     int dx, dy, d, e;
+    if (!t) return;
+
     dx = abs(x1 - x2);
     dy = abs(y1 - y2);
-
     if ((dx >= dy && x1 > x2) || (dx < dy && y1 > y2)) {
         d = x1; x1 = x2; x2 = d;
         d = y1; y1 = y2; y2 = d;
@@ -172,6 +306,7 @@ void texture_line(TEXTURE *t, int x1, int y1, int x2, int y2, uint32_t c)
 void texture_bitblt(TEXTURE *dst, int dstx, int dsty, TEXTURE *src, int srcx, int srcy, int w, int h)
 {
     int  i, j;
+    if (!dst || !src) return;
     w = w > 0 ? w : src->w;
     h = h > 0 ? h : src->h;
     for (i = 0; i < h; i++) {
@@ -185,6 +320,7 @@ void texture_fillrect(TEXTURE *t, int x, int y, int w, int h, uint32_t c)
 {
     uint8_t *c_argb = (uint8_t*)&c;
     int      i, j;
+    if (!t) return;
     if (c_argb[3]) {
         for (i = 0; i < h; i++) {
             for (j = 0; j < w; j++) {
