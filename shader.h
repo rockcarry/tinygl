@@ -21,7 +21,7 @@ typedef struct shader_t {
 SHADER* shader_init(char *vertex, char *fragmt);
 void    shader_free(SHADER *sd);
 
-void  shader_set_param(SHADER *sd, char *name, void *data);
-void* shader_get_param(SHADER *sd, char *name);
+void  shader_set(SHADER *sd, char *name, void *data);
+void* shader_get(SHADER *sd, char *name);
 
 #endif

@@ -120,7 +120,7 @@ void tinygl_set(void *ctx, char *name, void *data)
             gl->target = data; tinygl_viewport(gl, 0, 0, gl->target->w, gl->target->h, 255);
         }
     }
-    else if (strstr(name, "shader.") == name) shader_set_param(gl->shader, name + 7, data);
+    else if (strstr(name, "shader.") == name) shader_set(gl->shader, name + 7, data);
     else if (strcmp(name, "save"   ) == 0   ) texture_save(gl->target, data);
 }
 
@@ -130,7 +130,7 @@ void* tinygl_get(void *ctx, char *name)
     if (!ctx || !name) return NULL;
     if      (strcmp(name, "shader" ) == 0   ) return gl->shader;
     else if (strcmp(name, "target" ) == 0   ) return gl->target;
-    else if (strstr(name, "shader.") == name) return shader_get_param(gl->shader, name + 7);
+    else if (strstr(name, "shader.") == name) return shader_get(gl->shader, name + 7);
     return NULL;
 }
 

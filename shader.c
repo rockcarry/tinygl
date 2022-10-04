@@ -248,7 +248,7 @@ void shader_free(SHADER *sd) {
     }
 }
 
-void shader_set_param(SHADER *sd, char *name, void *data)
+void shader_set(SHADER *sd, char *name, void *data)
 {
     if (!sd || !name) return;
     if      (strcmp(name, "model"  ) == 0) memcpy(sd->matrix_model, data, sizeof(sd->matrix_model));
@@ -264,7 +264,7 @@ void shader_set_param(SHADER *sd, char *name, void *data)
     else if (strcmp(name, "fragmt" ) == 0) set_fragmt(sd, (char*)data);
 }
 
-void* shader_get_param(SHADER *sd, char *name)
+void* shader_get(SHADER *sd, char *name)
 {
     if (!sd || !name) return NULL;
     if      (strcmp(name, "model"  ) == 0) return sd->matrix_model;
