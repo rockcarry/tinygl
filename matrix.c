@@ -5,11 +5,10 @@
 
 void matnf_mul(float *mr, float *ma, int rowa, int cola, float *mb, int rowb, int colb)
 {
-    int i, j, k;
-    for (i = 0; i < rowa; i++) {
-        for (j = 0; j < colb; j++) {
+    for (int i = 0; i < rowa; i++) {
+        for (int j = 0; j < colb; j++) {
             float sum = 0;
-            for (k = 0; k < cola; k++) {
+            for (int k = 0; k < cola; k++) {
                 sum += ma[i * cola + k] * mb[k * colb + j];
             }
             mr[i * colb + j] = sum;
@@ -19,9 +18,8 @@ void matnf_mul(float *mr, float *ma, int rowa, int cola, float *mb, int rowb, in
 
 void matnf_transpose(float *mr, int rowr, int colr, float *ma, int rowa, int cola)
 {
-    int i, j;
-    for (i = 0; i < rowr; i++) {
-        for (j = 0; j < colr; j++) {
+    for (int i = 0; i < rowr; i++) {
+        for (int j = 0; j < colr; j++) {
             mr[i * colr + j] = ma[j * cola + i];
         }
     }
@@ -29,9 +27,8 @@ void matnf_transpose(float *mr, int rowr, int colr, float *ma, int rowa, int col
 
 void matnf_identity(float *m, int n)
 {
-    int i, j;
-    for (i = 0; i < n; i++) {
-        for (j = 0; j < n; j++) {
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
             m[i * n + j] = (i == j) ? 1 : 0;
         }
     }
@@ -61,8 +58,7 @@ mat4f_t mat4f_identity(void)
 vec4f_t mat4f_mul_vec4f(mat4f_t m, vec4f_t v)
 {
     float tmp[4];
-    int   i;
-    for (i = 0; i < 4; i++) {
+    for (int i = 0; i < 4; i++) {
         float a = m.m[i][0] * v.x;
         float b = m.m[i][1] * v.y;
         float c = m.m[i][2] * v.z;

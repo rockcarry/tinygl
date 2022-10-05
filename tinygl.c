@@ -18,15 +18,13 @@ typedef struct {
 static int reinitzbuffer(TINYGL *gl, int zw, int zh)
 {
     float *newzbuf = NULL;
-    int    i, n;
     if (!gl->zbuffer || zw != gl->target->w || zh != gl->target->h) {
         newzbuf = malloc(zw * zh * sizeof(float));
         if (!newzbuf) return -1;
         free(gl->zbuffer);
         gl->zbuffer = newzbuf;
     }
-    n = zw * zh;
-    for (i = 0; i < n; i++) gl->zbuffer[i] = -FLT_MAX;
+    for (int i = 0, n = zw * zh; i < n; i++) gl->zbuffer[i] = -FLT_MAX;
     return 0;
 }
 
@@ -60,17 +58,25 @@ void tinygl_free(void *ctx)
     }
 }
 
-void tinygl_begin(void *ctx) { TINYGL *gl = (TINYGL*)ctx; if (gl) texture_lock  (gl->target); }
-void tinygl_end  (void *ctx) { TINYGL *gl = (TINYGL*)ctx; if (gl) texture_unlock(gl->target); }
+void tinygl_begin(void *ctx, int clear)
+{
+    TINYGL *gl = (TINYGL*)ctx;
+    if (gl) {
+        texture_lock(gl->target);
+        texture_fillrect(gl->target, 0, 0, gl->target->w, gl->target->h, 0);
+        reinitzbuffer(gl, gl->target->w, gl->target->h);
+    }
+}
+
+void tinygl_end(void *ctx) { TINYGL *gl = (TINYGL*)ctx; if (gl) texture_unlock(gl->target); }
 
 void tinygl_draw(void *ctx, void *m)
 {
     TINYGL  *gl = (TINYGL*)ctx;
     vertex_t t[3];
-    int      nface, i;
     if (!gl) return;
-    nface = model_get_face(m, -1, NULL);
-    for (i = 0; i < nface; i++) {
+    int nface = model_get_face(m, -1, NULL);
+    for (int i = 0; i < nface; i++) {
         model_get_face(m, i, t);
         draw_triangle(gl->target, gl->zbuffer, gl->shader, t);
     }
@@ -80,20 +86,16 @@ void tinygl_clear(void *ctx, char *type)
 {
     TINYGL *gl = (TINYGL*)ctx;
     if (!ctx) return;
-    if (strcmp(type, "framebuf") == 0) {
-        texture_fillrect(gl->target, 0, 0, gl->target->w, gl->target->h, 0);
-    } else if (strcmp(type, "zbuffer") == 0) {
-        reinitzbuffer(gl, gl->target->w, gl->target->h);
-    }
+    if (strstr(type, "framebuf")) texture_fillrect(gl->target, 0, 0, gl->target->w, gl->target->h, 0);
+    if (strcmp(type, "zbuffer" )) reinitzbuffer(gl, gl->target->w, gl->target->h);
 }
 
 void tinygl_viewport(void *ctx, int x, int y, int w, int h, int depth)
 {
     TINYGL *gl = (TINYGL*)ctx;
-    mat4f_t m;
     if (!ctx) return;
-    m = mat4f_viewport(x, y, w, h, depth);
-    shader_set(gl->shader, "port", &m);
+    mat4f_t m = mat4f_viewport(x, y, w, h, depth);
+    shader_set(gl->shader, "mat_port", &m);
 }
 
 void tinygl_set(void *ctx, char *name, void *data)
@@ -121,6 +123,9 @@ void* tinygl_get(void *ctx, char *name)
 }
 
 #ifdef _TEST_TINYGL_
+#include <math.h>
+#include <unistd.h>
+#include "matrix.h"
 #include "wingdi.h"
 int main(void)
 {
@@ -131,29 +136,34 @@ int main(void)
     } s_model_list[] = {
         { "model/head.obj"          , "model/head.tga"           },
         { "model/head_eye_inner.obj", "model/head_eye_inner.tga" },
-        { "model/head_eye_outer.obj", "model/head_eye_inner.tga" },
         { NULL                      , NULL                       },
     };
-    void *wingdi = wingdi_init(800, 800);
-    void *tinygl = tinygl_init(0  , 0  );
-    int   i;
+    void *win = wingdi_init(640, 640);
+    void *gl  = tinygl_init(0  , 0  );
+    int   angle = 0, i;
 
-    tinygl_set(tinygl, "target", wingdi_get(wingdi, "texture"));
-    tinygl_set(tinygl, "shader.vertex", "perspective");
-    tinygl_set(tinygl, "shader.fragmt", "texture2"   );
-    tinygl_begin(tinygl);
-    for (i = 0; s_model_list[i].file_obj; i++) {
-        s_model_list[i].model = model_load(s_model_list[i].file_obj, s_model_list[i].file_text);
-        tinygl_set (tinygl, "shader.texture", model_get_texture(s_model_list[i].model));
-        tinygl_draw(tinygl, s_model_list[i].model);
-        model_free(s_model_list[i].model);
-        s_model_list[i].model = NULL;
+    tinygl_set(gl, "target", wingdi_get(win, "texture"));
+    tinygl_set(gl, "shader.target", wingdi_get(win, "texture"));
+    tinygl_set(gl, "shader.vertex", "flat");
+    tinygl_set(gl, "shader.fragmt", "texture0");
+
+    for (i = 0; s_model_list[i].file_obj; i++) s_model_list[i].model = model_load(s_model_list[i].file_obj, s_model_list[i].file_text);
+    while (strcmp(wingdi_get(win, "state"), "closed") != 0) {
+        mat4f_t matrot = mat4f_rotate_y(angle * 2 * M_PI / 360); angle += 2;
+        tinygl_set(gl, "shader.mat_model", &matrot);
+        tinygl_begin(gl, 1);
+        for (i = 0; s_model_list[i].model; i++) {
+            tinygl_set (gl, "shader.texture", model_get_texture(s_model_list[i].model));
+            tinygl_draw(gl, s_model_list[i].model);
+        }
+        tinygl_end(gl);
+        usleep(10 * 1000);
     }
-    tinygl_end(tinygl);
+    for (i = 0; s_model_list[i].file_obj; i++) { model_free(s_model_list[i].model); s_model_list[i].model = NULL; }
 
-    tinygl_set (tinygl, "save", "out.bmp");
-    tinygl_free(tinygl);
-    wingdi_free(wingdi, 0);
+    tinygl_set (gl, "save", "out.bmp");
+    tinygl_free(gl);
+    wingdi_free(win, 0);
     return 0;
 }
 #endif

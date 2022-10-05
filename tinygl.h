@@ -3,7 +3,7 @@
 
 void* tinygl_init (int w, int h);
 void  tinygl_free (void *ctx);
-void  tinygl_begin(void *ctx);
+void  tinygl_begin(void *ctx, int clear);
 void  tinygl_end  (void *ctx);
 void  tinygl_draw (void *ctx, void *model);
 void  tinygl_clear(void *ctx, char *type );

@@ -10,6 +10,8 @@ typedef struct {
     HBITMAP   hbmp;
     TEXTURE   texture;
     pthread_t hthread;
+    #define FLAG_CLOSED (1 << 0)
+    uint32_t  flags;
 } WINGDI;
 
 #define TINYGL_WND_CLASS TEXT("TinyGLWndClass")
@@ -89,6 +91,7 @@ static void* wingdi_thread_proc(void *param)
 
 done:
     if (win->hwnd) { DestroyWindow(win->hwnd); win->hwnd = NULL; }
+    win->flags |= FLAG_CLOSED;
     return NULL;
 }
 
@@ -143,6 +146,7 @@ void* wingdi_get(void *ctx, char *name)
     WINGDI *win = (WINGDI*)ctx;
     if (!ctx || !name) return NULL;
     if (strcmp(name, "texture") == 0) return &win->texture;
+    if (strcmp(name, "state"  ) == 0) return (win->flags & FLAG_CLOSED) ? "closed" : "running";
     return NULL;
 }
 

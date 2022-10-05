@@ -223,7 +223,6 @@ static int texture_save_tga(TEXTURE *t, char *file)
     FILE         *fp     = fopen(file, "wb");
     TGAFILEHEADER header = {0};
     uint32_t     *data;
-    int           i, j;
 
     if (!fp) return -1;
     header.ImageType  = 2;
@@ -232,8 +231,8 @@ static int texture_save_tga(TEXTURE *t, char *file)
     header.PixelDepth = 24;
     fwrite(&header, sizeof(header), 1, fp);
     data = t->data + t->w * (t->h - 1);
-    for (i = 0; i < t->h; i++) {
-        for (j = 0; j < t->w; j++) {
+    for (int i = 0; i < t->h; i++) {
+        for (int j = 0; j < t->w; j++) {
             fputc(data[j] >> 0, fp);
             fputc(data[j] >> 8, fp);
             fputc(data[j] >>16, fp);
@@ -309,12 +308,11 @@ void texture_line(TEXTURE *t, int x1, int y1, int x2, int y2, uint32_t c)
 
 void texture_bitblt(TEXTURE *dst, int dstx, int dsty, TEXTURE *src, int srcx, int srcy, int w, int h)
 {
-    int  i, j;
     if (!dst || !src) return;
     w = w > 0 ? w : src->w;
     h = h > 0 ? h : src->h;
-    for (i = 0; i < h; i++) {
-        for (j = 0; j < w; j++) {
+    for (int i = 0; i < h; i++) {
+        for (int j = 0; j < w; j++) {
             texture_setcolor(dst, dstx + j, dsty + i, texture_getcolor(src, srcx + j, srcy + i));
         }
     }
@@ -323,11 +321,10 @@ void texture_bitblt(TEXTURE *dst, int dstx, int dsty, TEXTURE *src, int srcx, in
 void texture_fillrect(TEXTURE *t, int x, int y, int w, int h, uint32_t c)
 {
     uint8_t *c_argb = (uint8_t*)&c;
-    int      i, j;
     if (!t) return;
     if (c_argb[3]) {
-        for (i = 0; i < h; i++) {
-            for (j = 0; j < w; j++) {
+        for (int i = 0; i < h; i++) {
+            for (int j = 0; j < w; j++) {
                 uint32_t bc = texture_getcolor(t, x + j, y + i);
                 uint8_t *b_argb = (uint8_t*)&bc;
                 b_argb[2] = c_argb[2] + c_argb[3] * (b_argb[2] - c_argb[2]) / 255;
@@ -337,8 +334,8 @@ void texture_fillrect(TEXTURE *t, int x, int y, int w, int h, uint32_t c)
             }
         }
     } else {
-        for (i = 0; i < h; i++) {
-            for (j = 0; j < w; j++) {
+        for (int i = 0; i < h; i++) {
+            for (int j = 0; j < w; j++) {
                 texture_setcolor(t, x + j, y + i, c);
             }
         }

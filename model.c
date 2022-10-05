@@ -89,7 +89,7 @@ void model_free(void *ctx)
 void model_save(void *ctx, char *fileobj, char *filetext)
 {
     MODEL *model = (MODEL*)ctx;
-    FILE  *fp;
+    FILE  *fp    = NULL;
     int    i;
     if (!ctx) return;
     fp = fopen(fileobj, "wb");
@@ -115,13 +115,12 @@ void* model_get_texture(void *ctx)
 
 int model_get_face(void *ctx, int idx, vertex_t face[3])
 {
-    int    i;
     MODEL *model = (MODEL*)ctx;
     if (ctx == NULL) return -1;
     if (idx == -1  ) return model->num_f;
 
     idx %= model->num_f;
-    for (i = 0; i < 3; i++) {
+    for (int i = 0; i < 3; i++) {
         face[i].v .x     = model->lst_v [(model->lst_f[idx].v [i] - 1) % model->num_v ].x;
         face[i].v .y     = model->lst_v [(model->lst_f[idx].v [i] - 1) % model->num_v ].y;
         face[i].v .z     = model->lst_v [(model->lst_f[idx].v [i] - 1) % model->num_v ].z;
@@ -138,11 +137,10 @@ int model_get_face(void *ctx, int idx, vertex_t face[3])
 #ifdef _TEST_MODEL_
 int main(void)
 {
-    void    *model = model_load("head.obj", "head.bmp");
-    int      nface = model_get_face(model, -1, NULL);
-    int      i;
-    vertex_t triangle[3];
-    for (i = 0; i < nface; i++) model_get_face(model, i, triangle);
+    void *model = model_load("head.obj", "head.bmp");
+    int   nface = model_get_face(model, -1, NULL);
+    vertex_t t[3];
+    for (int i = 0; i < nface; i++) model_get_face(model, i, t);
     model_save(model, "out.obj", NULL);
     model_free(model);
     return 0;
