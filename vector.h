@@ -4,79 +4,88 @@
 #include <stdint.h>
 
 typedef union {
+    uint32_t c;
+    uint8_t  argb[4];
+} color_t;
+
+typedef union {
     struct { int x, y; };
     struct { int u, v; };
-    int raw[2];
 } vec2i_t;
 
 typedef union {
     struct { int x, y, z; };
-    uint8_t raw[3];
 } vec3i_t;
 
 typedef union {
     struct { int x, y, z, w; };
-    int raw[4];
 } vec4i_t;
 
 typedef union {
     struct { float x, y; };
     struct { float u, v; };
-    float raw[2];
 } vec2f_t;
 
 typedef union {
     struct { float x, y, z; };
     struct { float u, v, w; };
     struct { float alpha, beta, gamma; };
-    float raw[3];
 } vec3f_t;
 
 typedef union {
     struct { float x, y, z, w; };
     struct { float u, v, m, n; };
     struct { float alpha, beta, gamma, delta; };
-    float raw[4];
 } vec4f_t;
-
-typedef union {
-    uint32_t c;
-    uint8_t  argb[4];
-} color_t;
 
 typedef struct {
     vec4f_t v;  // 顶点坐标
-    vec4f_t vt; // 纹理坐标
-    vec4f_t vn; // 法向量
+    vec2f_t vt; // 纹理坐标
+    vec3f_t vn; // 法向量
     color_t c ; // 颜色值
 } vertex_t;
 
-void  vectorni_add  (int *r, int *a, int *b, int n);
-void  vectorni_sub  (int *r, int *a, int *b, int n);
-void  vectorni_mul  (int *r, int *a, int  k, int n);
-void  vector3i_cross(int *r, int *a, int *b);
-int   vectorni_dot  (int *a, int *b, int  n);
-int   vectorni_abs  (int *a, int n);
+color_t color_rgb (uint8_t r, uint8_t g, uint8_t b);
+color_t color_argb(uint8_t a, uint8_t r, uint8_t g, uint8_t b);
 
-void  vectornf_add  (float *r, float *a, float *b, int n);
-void  vectornf_sub  (float *r, float *a, float *b, int n);
-void  vectornf_mul  (float *r, float *a, float  k, int n);
-void  vector3f_cross(float *r, float *a, float *b);
-float vectornf_dot  (float *a, float *b, int n);
-float vectornf_abs  (float *a, int n);
-void  vectornf_norm (float *a, int n);
+void  vecni_min(int *r, int *a, int *b, int n);
+void  vecni_max(int *r, int *a, int *b, int n);
+void  vecni_add(int *r, int *a, int *b, int n);
+void  vecni_sub(int *r, int *a, int *b, int n);
+void  vecni_mul(int *r, int *a, int  k, int n);
+int   vecni_dot(int *a, int *b, int  n);
+int   vecni_len(int *a, int  n);
 
-#define vector3i_add(r, a, b)   vectorni_add(r, a, b, 3)
-#define vector3i_sub(r, a, b)   vectorni_sub(r, a, b, 3)
-#define vector3i_mul(r, a, k)   vectorni_mul(r, a, k, 3)
-#define vector3i_dot(a, b)      vectorni_dot(a, b, 3)
-#define vector3i_abs(a)         vectorni_abs(a, 3)
+void  vecnf_min(float *r, float *a, float *b, int n);
+void  vecnf_max(float *r, float *a, float *b, int n);
+void  vecnf_add(float *r, float *a, float *b, int n);
+void  vecnf_sub(float *r, float *a, float *b, int n);
+void  vecnf_mul(float *r, float *a, float  k, int n);
+float vecnf_dot(float *a, float *b, int n);
+float vecnf_len(float *a, int n);
+void  vecnf_normalize(float *a, int n);
 
-#define vector3f_add(r, a, b)   vectornf_add(r, a, b, 3)
-#define vector3f_sub(r, a, b)   vectornf_sub(r, a, b, 3)
-#define vector3f_mul(r, a, k)   vectornf_mul(r, a, k, 3)
-#define vector3f_dot(a, b)      vectornf_dot(a, b, 3)
-#define vector3f_abs(a)         vectornf_abs(a, 3)
-#define vector3f_norm(a)        vectornf_norm(a, 3)
+vec3f_t vec3f_new(float x, float y, float z);
+vec3f_t vec3f_from_vec4f(vec4f_t v);
+vec3f_t vec3f_min(vec3f_t a, vec3f_t b);
+vec3f_t vec3f_max(vec3f_t a, vec3f_t b);
+vec3f_t vec3f_add(vec3f_t a, vec3f_t b);
+vec3f_t vec3f_sub(vec3f_t a, vec3f_t b);
+vec3f_t vec3f_mul(vec3f_t a, float   k);
+float   vec3f_dot(vec3f_t a, vec3f_t b);
+float   vec3f_len(vec3f_t a);
+vec3f_t vec3f_normalize(vec3f_t a);
+vec3f_t vec3f_cross(vec3f_t a, vec3f_t b);
+
+vec4f_t vec4f_new(float x, float y, float z, float w);
+vec4f_t vec4f_from_vec3f(vec3f_t a, float w);
+vec4f_t vec4f_min(vec4f_t a, vec4f_t b);
+vec4f_t vec4f_max(vec4f_t a, vec4f_t b);
+vec4f_t vec4f_add(vec4f_t a, vec4f_t b);
+vec4f_t vec4f_sub(vec4f_t a, vec4f_t b);
+vec4f_t vec4f_mul(vec4f_t a, float   k);
+float   vec4f_dot(vec4f_t a, vec4f_t b);
+float   vec4f_len(vec4f_t a);
+vec4f_t vec4f_normalize(vec4f_t a);
 
 #endif

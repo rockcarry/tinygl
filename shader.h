@@ -5,17 +5,14 @@
 #include "texture.h"
 
 typedef struct shader_t {
-    float    matrix_model[4 * 4];
-    float    matrix_view [4 * 4];
-    float    matrix_proj [4 * 4];
-    float    matrix_port [4 * 4];
-    vec3f_t  light, camera;
+    mat4f_t  mat_model, mat_view, mat_proj, mat_port;
+    vec3f_t  light;
     TEXTURE *target;
     TEXTURE *texture;
     TEXTURE *deftext;
     color_t  color;
     int (*vertex)(struct shader_t *sdc, vertex_t t[3]);
-    int (*fragmt)(struct shader_t *sdc, vertex_t t[3], vec3f_t *bc);
+    int (*fragmt)(struct shader_t *sdc, vertex_t t[3], vec3f_t bc);
 } SHADER;
 
 SHADER* shader_init(char *vertex, char *fragmt);

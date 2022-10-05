@@ -60,28 +60,19 @@ void tinygl_free(void *ctx)
     }
 }
 
-void tinygl_begin(void *ctx)
-{
-    TINYGL *gl = (TINYGL*)ctx;
-    if (gl) texture_lock(gl->target);
-}
+void tinygl_begin(void *ctx) { TINYGL *gl = (TINYGL*)ctx; if (gl) texture_lock  (gl->target); }
+void tinygl_end  (void *ctx) { TINYGL *gl = (TINYGL*)ctx; if (gl) texture_unlock(gl->target); }
 
-void tinygl_end(void *ctx)
-{
-    TINYGL *gl = (TINYGL*)ctx;
-    if (gl) texture_unlock(gl->target);
-}
-
-void tinygl_draw(void *ctx, void *model)
+void tinygl_draw(void *ctx, void *m)
 {
     TINYGL  *gl = (TINYGL*)ctx;
-    vertex_t triangle[3];
+    vertex_t t[3];
     int      nface, i;
     if (!gl) return;
-    nface = model_get_face(model, -1, NULL);
+    nface = model_get_face(m, -1, NULL);
     for (i = 0; i < nface; i++) {
-        model_get_face(model, i, triangle);
-        if (gl->shader->vertex(gl->shader, triangle) == 0) draw_triangle(gl->target, gl->zbuffer, gl->shader, triangle);
+        model_get_face(m, i, t);
+        draw_triangle(gl->target, gl->zbuffer, gl->shader, t);
     }
 }
 
@@ -98,16 +89,11 @@ void tinygl_clear(void *ctx, char *type)
 
 void tinygl_viewport(void *ctx, int x, int y, int w, int h, int depth)
 {
-    if (ctx) {
-        float *matrix = tinygl_get(ctx, "shader.port");
-        matrix_identity(matrix , 4);
-        matrix[0 * 4 + 3] = (float)x + w / 2.0;
-        matrix[1 * 4 + 3] = (float)y + h / 2.0;
-        matrix[2 * 4 + 3] = (float)depth / 2.0;
-        matrix[0 * 4 + 0] = (float)w / 2.0;
-        matrix[1 * 4 + 1] = (float)h /-2.0;
-        matrix[2 * 4 + 2] = (float)depth / 2.0;
-    }
+    TINYGL *gl = (TINYGL*)ctx;
+    mat4f_t m;
+    if (!ctx) return;
+    m = mat4f_viewport(x, y, w, h, depth);
+    shader_set(gl->shader, "port", &m);
 }
 
 void tinygl_set(void *ctx, char *name, void *data)
