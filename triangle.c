@@ -26,7 +26,7 @@ void draw_triangle(TEXTURE *target, float *zbuf, SHADER *shader, vertex_t v[3])
             float z = vec3f_dot(bc, vec3f_new(v[0].v.z, v[1].v.z, v[2].v.z));
             if (zbuf[j + i * target->w] < z) {
                 if ((c = shader->fragmt(shader, v, bc)) != -1) {
-                    texture_setcolor(target, j, i, c);
+                    target->data[i * target->w + j] = c;
                     zbuf[j + i * target->w] = z;
                 }
             }
