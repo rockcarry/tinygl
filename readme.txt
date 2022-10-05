@@ -20,6 +20,7 @@ tinygl 是一个软件光栅化 3D 图形渲染器。
 7. 顶点着色器：wire, rand, flat, gouraud
 8. 片元着色器：color*, phong, normal*, texture*
 9. 简洁易用的 API 设计、优化的架构设计、良好的编码规范
+10.在 win10 上实测，人头模型可轻松跑到 100fps 的帧率（cpu 占用 20%）
 
 
 
@@ -58,8 +59,8 @@ void* tinygl_init(int w, int h);
 void tinygl_free(void *ctx);
 反初始化
 
-void tinygl_begin(void *ctx);
-开始渲染
+void tinygl_begin(void *ctx, int clear);
+开始渲染，clear 如果为 1 会清除 framebuffer 和 zbuffer
 
 void tinygl_end(void *ctx);
 完成渲染
@@ -71,6 +72,7 @@ void tinygl_clear(void *ctx, char *type);
 用于清除 frame buffer 或者 z-buffer
 tinygl_clear(gl, "framebuf"); // 清除 frame buffer
 tinygl_clear(gl, "zbuffer" ); // 清除 z-buffer
+tinygl_clear(gl, "framebuf+zbuffer"); // 同时清除 frame buffer 和 z-buffer
 
 void  tinygl_set(void *ctx, char *name, void *data);
 void* tinygl_get(void *ctx, char *name);
@@ -102,7 +104,7 @@ shader.h
 shader 模块定义并实现了 shader 的接口和数据类型，可以在此基础上扩展实现更多的顶点着色器和片元着色器
 
 目前已经实现的着色器有：
-顶点着色器：perspective, wire, rand, flat, gouraud
+顶点着色器：wire, rand, flat, gouraud
 片元着色器：color0, color1, phong, normal0, normal1, texture0, texture1, texture2
 
 用户也可以通过 tinygl_set(gl, "shader.xxx", data); 来设置 tinygl 内部的 shader 参数
@@ -122,7 +124,7 @@ int main(void)
     void *gl = tinygl_init(800, 800);
     void *m  = model_load("head.obj", NULL);
 
-    tinygl_begin(gl);
+    tinygl_begin(gl, 1);
     tinygl_draw(gl, m);
     tinygl_end(gl);
     tinygl_set(gl, "save", "out.bmp");
