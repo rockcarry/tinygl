@@ -127,6 +127,7 @@ void* tinygl_get(void *ctx, char *name)
 #include <unistd.h>
 #include "matrix.h"
 #include "wingdi.h"
+#include "utils.h"
 int main(void)
 {
     struct {
@@ -141,6 +142,7 @@ int main(void)
     void *win = wingdi_init(640, 640);
     void *gl  = tinygl_init(0  , 0  );
     int   angle = 0, i;
+    uint32_t frc[4];
 
     tinygl_set(gl, "target", wingdi_get(win, "texture"));
     tinygl_set(gl, "shader.target", wingdi_get(win, "texture"));
@@ -157,7 +159,7 @@ int main(void)
             tinygl_draw(gl, s_model_list[i].model);
         }
         tinygl_end(gl);
-        usleep(10 * 1000);
+        frame_rate_control(frc, 60);
     }
     for (i = 0; s_model_list[i].file_obj; i++) { model_free(s_model_list[i].model); s_model_list[i].model = NULL; }
 

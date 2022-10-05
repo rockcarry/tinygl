@@ -22,7 +22,13 @@ static void gdi_texture_lock(TEXTURE *t) {}
 static void gdi_texture_unlock(TEXTURE *t)
 {
     WINGDI *win = container_of(t, WINGDI, texture);
-    InvalidateRect(win->hwnd, NULL, FALSE);
+    if (1) {
+        HDC hdc = GetDC(win->hwnd);
+        BitBlt(hdc, 0, 0, win->texture.w, win->texture.h, win->hdc, 0, 0, SRCCOPY);
+        ReleaseDC(win->hwnd ,hdc);
+    } else {
+        InvalidateRect(win->hwnd, NULL, FALSE);
+    }
 }
 
 static LRESULT CALLBACK WINGDI_WNDPROC(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
