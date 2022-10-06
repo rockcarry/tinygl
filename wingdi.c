@@ -39,7 +39,11 @@ static LRESULT CALLBACK WINGDI_WNDPROC(HWND hwnd, UINT uMsg, WPARAM wParam, LPAR
 {
     PAINTSTRUCT ps = {0};
     HDC        hdc = NULL;
+#ifdef _WIN64
+    WINGDI    *win = (WINGDI*)GetWindowLongPtr(hwnd, GWLP_USERDATA);
+#else
     WINGDI    *win = (WINGDI*)GetWindowLong(hwnd, GWL_USERDATA);
+#endif
     switch (uMsg) {
     case WM_KEYUP: case WM_KEYDOWN: case WM_SYSKEYUP: case WM_SYSKEYDOWN:
         if (win->callback) win->callback(win->cbctx, WINGDI_MSG_KEY_EVENT, uMsg == WM_KEYDOWN || uMsg == WM_SYSKEYDOWN, wParam, NULL);
@@ -84,7 +88,11 @@ static void* wingdi_thread_proc(void *param)
         NULL, NULL, wc.hInstance, NULL);
     if (!win->hwnd) goto done;
 
+#ifdef _WIN64
+    SetWindowLongPtr(win->hwnd, GWLP_USERDATA, (LONG_PTR)win);
+#else
     SetWindowLong(win->hwnd, GWL_USERDATA, (LONG)win);
+#endif
     GetClientRect(win->hwnd, &rect);
     w = win->texture.w + (win->texture.w - rect.right );
     h = win->texture.h + (win->texture.h - rect.bottom);
