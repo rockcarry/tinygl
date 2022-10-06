@@ -120,9 +120,17 @@ shader 模块定义并实现了 shader 的接口和数据类型，可以在此�
 
 
 
++-----------+
+ tinygl_demo
++-----------+
+tinygl_demo 目前实现了在窗口上旋转显示模型，并支持空格按键切换 shader 类型
+
+
+
 +------------+
  hello tinygl
 +------------+
+下面是最简单的 tinygl 示例，把人头模型渲染并保存到 out.bmp:
 
 #include "tinygl.h"
 #include "model.h"
@@ -130,7 +138,7 @@ shader 模块定义并实现了 shader 的接口和数据类型，可以在此�
 int main(void)
 {
     void *gl = tinygl_init(800, 800);
-    void *m  = model_load("head.obj", NULL);
+    void *m  = model_load("model/head.obj", NULL);
 
     tinygl_begin(gl, 1);
     tinygl_draw(gl, m);
@@ -141,6 +149,7 @@ int main(void)
     tinygl_free(gl);
     return 0;
 }
+
 
 
 
