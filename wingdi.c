@@ -1,17 +1,21 @@
 #include <windows.h>
 #include <pthread.h>
-#include "defines.h"
 #include "texture.h"
 #include "wingdi.h"
+#include "utils.h"
 
 typedef struct {
-    HWND      hwnd;
-    HDC       hdc;
-    HBITMAP   hbmp;
-    TEXTURE   texture;
-    pthread_t hthread;
+    HWND           hwnd;
+    HDC            hdc;
+    HBITMAP        hbmp;
+    TEXTURE        texture;
+
     #define FLAG_CLOSED (1 << 0)
-    uint32_t  flags;
+    uint32_t       flags;
+    pthread_t      hthread;
+
+    PFN_WIN_MSG_CB callback;
+    void          *cbctx;
 } WINGDI;
 
 #define TINYGL_WND_CLASS TEXT("TinyGLWndClass")
@@ -37,7 +41,10 @@ static LRESULT CALLBACK WINGDI_WNDPROC(HWND hwnd, UINT uMsg, WPARAM wParam, LPAR
     HDC        hdc = NULL;
     WINGDI    *win = (WINGDI*)GetWindowLong(hwnd, GWL_USERDATA);
     switch (uMsg) {
-    case WM_TIMER: case WM_KEYUP: case WM_KEYDOWN: case WM_SYSKEYUP: case WM_SYSKEYDOWN: case WM_MOUSEMOVE: case WM_MOUSEWHEEL:
+    case WM_KEYUP: case WM_KEYDOWN: case WM_SYSKEYUP: case WM_SYSKEYDOWN:
+        if (win->callback) win->callback(win->cbctx, WINGDI_MSG_KEY_EVENT, uMsg == WM_KEYDOWN || uMsg == WM_SYSKEYDOWN, wParam, NULL);
+        return 0;
+    case WM_MOUSEMOVE: case WM_MOUSEWHEEL:
     case WM_LBUTTONUP: case WM_LBUTTONDOWN: case WM_RBUTTONUP: case WM_RBUTTONDOWN: case WM_MBUTTONUP: case WM_MBUTTONDOWN:
         return 0;
     case WM_PAINT:
@@ -101,7 +108,7 @@ done:
     return NULL;
 }
 
-void* wingdi_init(int w, int h)
+void* wingdi_init(int w, int h, PFN_WIN_MSG_CB callback, void *cbctx)
 {
     WINGDI *win = calloc(1, sizeof(WINGDI));
     if (!win) return NULL;
@@ -122,11 +129,12 @@ void* wingdi_init(int w, int h)
 
     GetObject(win->hbmp, sizeof(BITMAP), &bitmap);
     SelectObject(win->hdc, win->hbmp);
+    win->callback  = callback;
+    win->cbctx     = cbctx;
     win->texture.w = w;
     win->texture.h = h;
     win->texture.lock   = gdi_texture_lock;
     win->texture.unlock = gdi_texture_unlock;
-
     pthread_create(&win->hthread, NULL, wingdi_thread_proc, win);
     return win;
 
@@ -159,7 +167,7 @@ void* wingdi_get(void *ctx, char *name)
 #ifdef _TEST_WINGDI_
 int main(void)
 {
-    wingdi_free(wingdi_init(640, 480), 0);
+    wingdi_free(wingdi_init(640, 480, NULL, NULL), 0);
     return 0;
 }
 #endif

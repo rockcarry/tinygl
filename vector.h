@@ -41,7 +41,7 @@ typedef union {
 typedef struct {
     vec4f_t v;  // 顶点坐标
     vec2f_t vt; // 纹理坐标
-    vec3f_t vn; // 法向量
+    vec4f_t vn; // 法向量
     color_t c ; // 颜色值
 } vertex_t;
 

@@ -15,12 +15,13 @@ static color_t color_interpolate(vertex_t t[3], vec3f_t bc)
     return c;
 }
 
-static vec3f_t normal_interpolate(vertex_t t[3], vec3f_t bc)
+static vec4f_t normal_interpolate(vertex_t t[3], vec3f_t bc)
 {
-    vec3f_t vn;
+    vec4f_t vn;
     vn.alpha = bc.alpha * t[0].vn.alpha + bc.beta * t[1].vn.alpha + bc.gamma * t[2].vn.alpha;
     vn.beta  = bc.alpha * t[0].vn.beta  + bc.beta * t[1].vn.beta  + bc.gamma * t[2].vn.beta ;
     vn.gamma = bc.alpha * t[0].vn.gamma + bc.beta * t[1].vn.gamma + bc.gamma * t[2].vn.gamma;
+    vn.delta = 1;
     return vn;
 }
 
@@ -30,18 +31,28 @@ static vec2f_t uv_interpolate(vertex_t t[3], vec3f_t bc)
     return uv;
 }
 
-static color_t color_from_normal(vec3f_t vn)
+static color_t color_from_normal(vec4f_t vn)
 {
     return color_rgb((1.0 - vn.alpha) * 0.5 * 255, (1.0 - vn.beta ) * 0.5 * 255, (1.0 - vn.gamma) * 0.5 * 255);
 }
 
 static color_t color_intensity(color_t c, float intensity)
 {
-    return color_rgb(intensity * c.argb[2], intensity * c.argb[1], intensity * c.argb[0]);
+    float fb = intensity * c.argb[0]; if (fb > 255) fb = 255;
+    float fg = intensity * c.argb[1]; if (fg > 255) fg = 255;
+    float fr = intensity * c.argb[2]; if (fr > 255) fr = 255;
+    return color_rgb(fr, fg, fb);
+}
+
+static color_t color_get_by_uv(struct shader_t *sd, vec2f_t uv)
+{
+    int x = uv.u * sd->texture->w, y = uv.v * sd->texture->h;
+    color_t c = { .c = sd->texture->data[x + y * sd->texture->w] };
+    return c;
 }
 
 static void model_transform(struct shader_t *sd, vertex_t t[3]) {
-    int i; for (i = 0; i < 3; i++) t[i].v = mat4f_mul_vec4f(sd->mat_model, t[i].v);
+    int i; for (i = 0; i < 3; i++) { t[i].v = mat4f_mul_vec4f(sd->mat_model, t[i].v); t[i].vn = mat4f_mul_vec4f(sd->mat_model, t[i].vn); }
 }
 
 static int perspective_projection(struct shader_t *sd, vertex_t t[3])
@@ -65,6 +76,7 @@ static int wireframe_vertex(struct shader_t *sd, vertex_t t[3])
 
 static int randcolor_vertex(struct shader_t *sd, vertex_t t[3])
 {
+    model_transform(sd, t);
     perspective_projection(sd, t);
     for (int i = 0; i < 3; i++) t[i].c = color_rgb(rand(), rand(), rand());
     return 0;
@@ -78,7 +90,7 @@ static int flatcolor_vertex(struct shader_t *sd, vertex_t t[3])
     vec3f_t vn = vec3f_normalize(vec3f_cross(v1, v2));
     float intensity = vec3f_dot(vn, sd->light);
     if (intensity < 0) return -1;
-    for (int i = 0; i < 3; i++) t[i].c = color_intensity(t[i].c, intensity);
+    for (int i = 0; i < 3; i++) t[i].c = color_intensity(sd->color, intensity);
     perspective_projection(sd, t);
     return 0;
 }
@@ -87,10 +99,17 @@ static int gouraud_vertex(struct shader_t *sd, vertex_t t[3])
 {
     model_transform(sd, t);
     for (int i = 0; i < 3; i++) {
-        float intensity = vec3f_dot(t[i].vn, sd->light);
+        float intensity = vec3f_dot(vec3f_from_vec4f(t[i].vn), sd->light);
         if (intensity < 0) return -1;
-        t[i].c = color_intensity(t[i].c, intensity);
+        t[i].c = color_intensity(sd->color, intensity);
     }
+    perspective_projection(sd, t);
+    return 0;
+}
+
+static int mvpp_vertex(struct shader_t *sd, vertex_t t[3])
+{
+    model_transform(sd, t);
     perspective_projection(sd, t);
     return 0;
 }
@@ -100,8 +119,8 @@ static int fillcolor1_fragmt(struct shader_t *sd, vertex_t t[3], vec3f_t bc) { r
 
 static int phongcolor_fragmt(struct shader_t *sd, vertex_t t[3], vec3f_t bc)
 {
-    vec3f_t vn = normal_interpolate(t, bc);
-    float intensity = vec3f_dot(vn, sd->light);
+    vec4f_t vn = normal_interpolate(t, bc);
+    float intensity = vec3f_dot(vec3f_from_vec4f(vn), sd->light);
     if (intensity < 0) return -1;
     return color_intensity(sd->color, intensity).c;
 }
@@ -118,29 +137,22 @@ static int normal1_fragmt(struct shader_t *sd, vertex_t t[3], vec3f_t bc)
 
 static int texture0_fragmt(struct shader_t *sd, vertex_t t[3], vec3f_t bc)
 {
-    vec2f_t uv = uv_interpolate(t, bc);
-    return texture_getcolor(sd->texture, uv.u * sd->texture->w, uv.v * sd->texture->h);
+    return color_get_by_uv(sd, uv_interpolate(t, bc)).c;
 }
 
 static int texture1_fragmt(struct shader_t *sd, vertex_t t[3], vec3f_t bc)
 {
-    float intensity = vec3f_dot(t[0].vn, sd->light);
-    vec2f_t uv; color_t c;
+    float intensity = vec3f_dot(vec3f_from_vec4f(t[0].vn), sd->light);
     if (intensity < 0) return -1;
-    uv = uv_interpolate(t, bc);
-    c.c = texture_getcolor(sd->texture, uv.u * sd->texture->w, uv.v * sd->texture->h);
-    return color_intensity(c, intensity).c;
+    return color_intensity(color_get_by_uv(sd, uv_interpolate(t, bc)), intensity).c;
 }
 
 static int texture2_fragmt(struct shader_t *sd, vertex_t t[3], vec3f_t bc)
 {
-    vec2f_t uv; color_t c;
-    vec3f_t vn = normal_interpolate(t, bc);
-    float intensity = vec3f_dot(vn, sd->light);
+    vec4f_t vn = normal_interpolate(t, bc);
+    float intensity = vec3f_dot(vec3f_from_vec4f(vn), sd->light);
     if (intensity < 0) return -1;
-    uv = uv_interpolate(t, bc);
-    c.c = texture_getcolor(sd->texture, uv.u * sd->texture->w, uv.v * sd->texture->h);
-    return color_intensity(c, intensity).c;
+    return color_intensity(color_get_by_uv(sd, uv_interpolate(t, bc)), intensity).c;
 }
 
 static struct {
@@ -150,6 +162,7 @@ static struct {
     { "rand"       , randcolor_vertex  },
     { "flat"       , flatcolor_vertex  },
     { "gouraud"    , gouraud_vertex    },
+    { "mvpp"       , mvpp_vertex       },
     { NULL         , NULL              },
 };
 

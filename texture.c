@@ -1,8 +1,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include "defines.h"
 #include "texture.h"
+#include "utils.h"
 
 //++ for bmp file ++//
 // 内部类型定义

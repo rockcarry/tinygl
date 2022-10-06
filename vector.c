@@ -1,6 +1,6 @@
 #include <math.h>
-#include "defines.h"
 #include "vector.h"
+#include "utils.h"
 
 #define VECTOR_MIN(r, a, b, n) do { int  i; for (i = 0; i < n; i++) (r)[i] = MIN((a)[i], (b)[i]); } while (0)
 #define VECTOR_MAX(r, a, b, n) do { int  i; for (i = 0; i < n; i++) (r)[i] = MAX((a)[i], (b)[i]); } while (0)
