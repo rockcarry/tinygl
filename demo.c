@@ -27,38 +27,60 @@ static char *s_shader_list[][2] = {
     { "mvpp"   , "texture2"}, // phong ÎÆÀíÓ³Éä
 };
 
+typedef struct {
+    int      change_shader;
+    vec3f_t  camera_position;
+    vec3f_t  camera_target;
+    vec3f_t  camera_up;
+} DEMO;
+
 static void my_winmsg_callback(void *cbctx, int msg, uint32_t param1, uint32_t param2, void *param3)
 {
-    int *change = (int*)cbctx;
+    DEMO *demo = (DEMO*)cbctx;
     switch (msg) {
     case WINGDI_MSG_KEY_EVENT:
         printf("key: %d, %s\n", param2, param1 ? "pressed" : "released"); fflush(stdout);
-        if (param1 && param2 == ' ') *change = 1;
+        if (param1) {
+            switch (param2) {
+            case ' ': demo->change_shader = 1; break;
+            case 'E': case 'e': demo->camera_position.z -= 0.5; demo->camera_target.y = demo->camera_position.y; break;
+            case 'D': case 'd': demo->camera_position.z += 0.5; demo->camera_target.y = demo->camera_position.y; break;
+            case 'S': case 's': demo->camera_position.x -= 0.1; demo->camera_target.x = demo->camera_position.x; break;
+            case 'F': case 'f': demo->camera_position.x += 0.1; demo->camera_target.x = demo->camera_position.x; break;
+            }
+        }
         break;
     }
 }
 
 int main(void)
 {
+    DEMO  demo= { 1, {{ 0, 0, 3 }}, {{ 0, 0, -1 }}, {{ 0, 1, 0 }} };
     void *models[ARRAYSIZE(s_model_list)] = { NULL };
-    int   angle = 0, curshader = 0, change = 1, i;
-    void *win = wingdi_init(640, 640, my_winmsg_callback, &change);
-    void *gl  = tinygl_init(0  , 0  );
+    int   curshader = 3, angle = 0, i;
+    void *win = wingdi_init(640, 480, my_winmsg_callback, &demo);
+    void *gl  = tinygl_init(0, 0);
+    mat4f_t matmodel, matview, matproj;
     uint32_t fratectrl[4];
 
-    tinygl_set(gl, "target", wingdi_get(win, "texture"));
+    tinygl_set(gl, "target"       , wingdi_get(win, "texture"));
     tinygl_set(gl, "shader.target", wingdi_get(win, "texture"));
 
     for (i = 0; i < ARRAYSIZE(models); i++) models[i] = model_load(s_model_list[i][0], s_model_list[i][1]);
     while (strcmp(wingdi_get(win, "state"), "closed") != 0) {
-        if (change) {
+        if (demo.change_shader) {
             tinygl_set(gl, "shader.vertex", s_shader_list[curshader][0]);
             tinygl_set(gl, "shader.fragmt", s_shader_list[curshader][1]);
-            change = 0, curshader = (curshader + 1) % ARRAYSIZE(s_shader_list);
+            demo.change_shader = 0, curshader = (curshader + 1) % ARRAYSIZE(s_shader_list);
         }
-        mat4f_t matrot = mat4f_rotate_y(angle * 2 * M_PI / 360); angle += 2;
-        tinygl_set(gl, "shader.mat_model", &matrot);
-        tinygl_begin(gl, 1);
+
+        matmodel= mat4f_rotate_y(angle * 2 * M_PI / 360); angle += 2;
+        matview = mat4f_lookat(demo.camera_position, demo.camera_target, demo.camera_up);
+        matproj = mat4f_perspective(60 * 2 * M_PI / 360, 640.0 / 480.0, 0.1, 10000);
+        tinygl_set(gl, "shader.mat_model", &matmodel);
+        tinygl_set(gl, "shader.mat_view" , &matview );
+        tinygl_set(gl, "shader.mat_proj" , &matproj );
+        tinygl_begin(gl, 1); srand(0);
         for (i = 0; i < ARRAYSIZE(models); i++) {
             tinygl_set (gl, "shader.texture", model_get_texture(models[i]));
             tinygl_draw(gl, models[i]);
