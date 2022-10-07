@@ -63,8 +63,10 @@ void tinygl_begin(void *ctx, int clear)
     TINYGL *gl = (TINYGL*)ctx;
     if (gl) {
         texture_lock(gl->target);
-        texture_fillrect(gl->target, 0, 0, gl->target->w, gl->target->h, 0);
-        reinitzbuffer(gl, gl->target->w, gl->target->h);
+        if (clear) {
+            texture_fillrect(gl->target, 0, 0, gl->target->w, gl->target->h, 0);
+            reinitzbuffer(gl, gl->target->w, gl->target->h);
+        }
     }
 }
 
