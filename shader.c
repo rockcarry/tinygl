@@ -3,7 +3,14 @@
 #include <string.h>
 #include "shader.h"
 
-static vec4f_t perspective_division(vec4f_t v4) { return vec4f_new(v4.x / v4.w, v4.y / v4.w, v4.z / v4.w, 1); }
+static vec4f_t perspective_division(vec4f_t v) { return vec4f_new(v.x / v.w, v.y / v.w, v.z / v.w, 1); }
+
+static vec3f_t perspective_correction(vertex_t t[3], vec3f_t bc)
+{
+    vec3f_t v = {{ bc.alpha / t[0].w, bc.beta / t[1].w, bc.gamma / t[2].w }};
+    float   f = 1 / ( v.alpha + v.beta + v.gamma );
+    return vec3f_mul(v, f);
+}
 
 static color_t color_interpolate(vertex_t t[3], vec3f_t bc)
 {
@@ -60,6 +67,7 @@ static int perspective_projection(struct shader_t *sd, vertex_t t[3])
     for (int i = 0; i < 3; i++) {
         t[i].v = mat4f_mul_vec4f(sd->mat_view , t[i].v);
         t[i].v = mat4f_mul_vec4f(sd->mat_proj , t[i].v);
+        t[i].w = t[i].v.w;
         t[i].v = perspective_division(t[i].v);
         t[i].v = mat4f_mul_vec4f(sd->mat_port , t[i].v);
     }
@@ -115,11 +123,11 @@ static int mvpp_vertex(struct shader_t *sd, vertex_t t[3])
 }
 
 static int fillcolor0_fragmt(struct shader_t *sd, vertex_t t[3], vec3f_t bc) { return t[0].c.c; }
-static int fillcolor1_fragmt(struct shader_t *sd, vertex_t t[3], vec3f_t bc) { return color_interpolate(t, bc).c; }
+static int fillcolor1_fragmt(struct shader_t *sd, vertex_t t[3], vec3f_t bc) { return color_interpolate(t, perspective_correction(t, bc)).c; }
 
 static int phongcolor_fragmt(struct shader_t *sd, vertex_t t[3], vec3f_t bc)
 {
-    vec4f_t vn = normal_interpolate(t, bc);
+    vec4f_t vn = normal_interpolate(t, perspective_correction(t, bc));
     float intensity = vec3f_dot(vec3f_from_vec4f(vn), sd->light);
     if (intensity < 0) return -1;
     return color_intensity(sd->color, intensity).c;
@@ -132,27 +140,28 @@ static int normal0_fragmt(struct shader_t *sd, vertex_t t[3], vec3f_t bc)
 
 static int normal1_fragmt(struct shader_t *sd, vertex_t t[3], vec3f_t bc)
 {
-    return color_from_normal(normal_interpolate(t, bc)).c;
+    return color_from_normal(normal_interpolate(t, perspective_correction(t, bc))).c;
 }
 
 static int texture0_fragmt(struct shader_t *sd, vertex_t t[3], vec3f_t bc)
 {
-    return color_get_by_uv(sd, uv_interpolate(t, bc)).c;
+    return color_get_by_uv(sd, uv_interpolate(t, perspective_correction(t, bc))).c;
 }
 
 static int texture1_fragmt(struct shader_t *sd, vertex_t t[3], vec3f_t bc)
 {
     float intensity = vec3f_dot(vec3f_from_vec4f(t[0].vn), sd->light);
     if (intensity < 0) return -1;
-    return color_intensity(color_get_by_uv(sd, uv_interpolate(t, bc)), intensity).c;
+    return color_intensity(color_get_by_uv(sd, uv_interpolate(t, perspective_correction(t, bc))), intensity).c;
 }
 
 static int texture2_fragmt(struct shader_t *sd, vertex_t t[3], vec3f_t bc)
 {
-    vec4f_t vn = normal_interpolate(t, bc);
+    vec3f_t pcbc = perspective_correction(t, bc);
+    vec4f_t vn   = normal_interpolate(t, pcbc);
     float intensity = vec3f_dot(vec3f_from_vec4f(vn), sd->light);
     if (intensity < 0) return -1;
-    return color_intensity(color_get_by_uv(sd, uv_interpolate(t, bc)), intensity).c;
+    return color_intensity(color_get_by_uv(sd, uv_interpolate(t, pcbc)), intensity).c;
 }
 
 static struct {

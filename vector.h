@@ -40,8 +40,9 @@ typedef union {
 
 typedef struct {
     vec4f_t v;  // 顶点坐标
-    vec2f_t vt; // 纹理坐标
     vec4f_t vn; // 法向量
+    vec2f_t vt; // 纹理坐标
+    float   w;  // 透视插值系数（透视投影校正系数）
     color_t c ; // 颜色值
 } vertex_t;
 
