@@ -1,4 +1,4 @@
-#include <stdlib.h>
+ï»¿#include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
@@ -9,22 +9,23 @@
 #include "utils.h"
 
 static char *s_model_list[][2] = {
-    { "model/head.obj"          , "model/head.tga"           }, // ÈËÍ·
-    { "model/head_eye_inner.obj", "model/head_eye_inner.tga" }, // ÑÛ¾¦
+    { "model/floor.obj"         , "model/floor_diffuse.tga"          }, // äººå¤´
+    { "model/head.obj"          , "model/head_diffuse.tga"           }, // äººå¤´
+    { "model/head_eye_inner.obj", "model/head_eye_inner_diffuse.tga" }, // çœ¼ç›
 };
 
 static char *s_shader_list[][2] = {
-    { "wire"   , "none"    }, // Ïß¿ò
-    { "rand"   , "color0"  }, // Ëæ»úÑÕÉ«£¬É«¿éÌî³ä
-    { "rand"   , "color1"  }, // Ëæ»úÑÕÉ«£¬½¥±äÌî³ä
-    { "flat"   , "color0"  }, // flat ×ÅÉ«£¬ÑÕÉ«Ìî³ä
-    { "gouraud", "color1"  }, // gouraud ×ÅÉ«£¬ÑÕÉ«Ìî³ä
-    { "mvpp"   , "phong"   }, // phong ×ÅÉ«£¬ÑÕÉ«Ìî³ä
-    { "flat"   , "normal0" }, // flat ÏòÁ¿×ÅÉ«
-    { "mvpp"   , "normal1" }, // phong ÏòÁ¿×ÅÉ«
-    { "flat"   , "texture1"}, // flat ÎÆÀíÓ³Éä
-    { "mvpp"   , "texture0"}, // Ö±½ÓÎÆÀíÓ³Éä
-    { "mvpp"   , "texture2"}, // phong ÎÆÀíÓ³Éä
+    { "wire"   , "none"    }, // çº¿æ¡†
+    { "rand"   , "color0"  }, // éšæœºé¢œè‰²ï¼Œè‰²å—å¡«å……
+    { "rand"   , "color1"  }, // éšæœºé¢œè‰²ï¼Œæ¸å˜å¡«å……
+    { "flat"   , "color0"  }, // flat ç€è‰²ï¼Œé¢œè‰²å¡«å……
+    { "gouraud", "color1"  }, // gouraud ç€è‰²ï¼Œé¢œè‰²å¡«å……
+    { "mvpp"   , "phong"   }, // phong ç€è‰²ï¼Œé¢œè‰²å¡«å……
+    { "flat"   , "normal0" }, // flat å‘é‡ç€è‰²
+    { "mvpp"   , "normal1" }, // phong å‘é‡ç€è‰²
+    { "flat"   , "texture1"}, // flat çº¹ç†æ˜ å°„
+    { "mvpp"   , "texture0"}, // ç›´æ¥çº¹ç†æ˜ å°„
+    { "mvpp"   , "texture2"}, // phong çº¹ç†æ˜ å°„
 };
 
 typedef struct {

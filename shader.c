@@ -206,7 +206,9 @@ SHADER* shader_init(char *vertex, char *fragmt)
     if (!sd->deftext) { free(sd); return NULL; }
     texture_fillrect(sd->deftext, 0, 0, sd->deftext->w, sd->deftext->h, RGB(0, 255, 0));
     sd->color .c = RGB(0, 255, 0);
-    sd->light .z =  -1;
+    sd->light .x =  0;
+    sd->light .y = -0.5;
+    sd->light .z = -1;
     sd->vertex   = flatcolor_vertex;
     sd->fragmt   = fillcolor0_fragmt;
     sd->mat_model = sd->mat_view = sd->mat_proj = sd->mat_port = mat4f_identity();
