@@ -53,8 +53,7 @@ static color_t color_intensity(color_t c, float intensity)
 
 static color_t color_get_by_uv(struct shader_t *sd, vec2f_t uv)
 {
-    int x = uv.u * sd->texture->w, y = uv.v * sd->texture->h;
-    color_t c = { .c = sd->texture->data[x + y * sd->texture->w] };
+    color_t c = { .c = texture_getcolor(sd->texture, uv.u * sd->texture->w, uv.v * sd->texture->h) };
     return c;
 }
 
