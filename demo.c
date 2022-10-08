@@ -61,10 +61,12 @@ int main(void)
     void *win = wingdi_init(640, 480, my_winmsg_callback, &demo);
     void *gl  = tinygl_init(0, 0);
     mat4f_t matmodel, matview, matproj;
-    uint32_t fratectrl[4];
+    uint32_t frc[4];
 
     tinygl_set(gl, "target"       , wingdi_get(win, "texture"));
     tinygl_set(gl, "shader.target", wingdi_get(win, "texture"));
+    matproj = mat4f_perspective(60 * 2 * M_PI / 360, 640.0 / 480.0, 0.1, 10000);
+    tinygl_set(gl, "shader.mat_proj", &matproj );
 
     for (i = 0; i < ARRAYSIZE(models); i++) models[i] = model_load(s_model_list[i][0], s_model_list[i][1]);
     while (strcmp(wingdi_get(win, "state"), "closed") != 0) {
@@ -76,17 +78,15 @@ int main(void)
 
         matmodel= mat4f_rotate_y(angle * 2 * M_PI / 360); angle += 2;
         matview = mat4f_lookat(demo.camera_position, demo.camera_target, demo.camera_up);
-        matproj = mat4f_perspective(60 * 2 * M_PI / 360, 640.0 / 480.0, 0.1, 10000);
         tinygl_set(gl, "shader.mat_model", &matmodel);
         tinygl_set(gl, "shader.mat_view" , &matview );
-        tinygl_set(gl, "shader.mat_proj" , &matproj );
         tinygl_begin(gl, 1); srand(0);
         for (i = 0; i < ARRAYSIZE(models); i++) {
             tinygl_set (gl, "shader.texture", model_get_texture(models[i]));
             tinygl_draw(gl, models[i]);
         }
         tinygl_end(gl);
-        frame_rate_control(fratectrl, 60);
+        frame_rate_ctrl(frc, 60);
     }
     for (i = 0; i < ARRAYSIZE(models); i++) { model_free(models[i]); models[i] = NULL; }
 

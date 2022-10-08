@@ -3,15 +3,11 @@
 #include <math.h>
 #include "matrix.h"
 
-void matnf_mul(float *mr, float *ma, int rowa, int cola, float *mb, int rowb, int colb)
+void matnf_identity(float *m, int n)
 {
-    for (int i = 0; i < rowa; i++) {
-        for (int j = 0; j < colb; j++) {
-            float sum = 0;
-            for (int k = 0; k < cola; k++) {
-                sum += ma[i * cola + k] * mb[k * colb + j];
-            }
-            mr[i * colb + j] = sum;
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            m[i * n + j] = (i == j) ? 1 : 0;
         }
     }
 }
@@ -25,11 +21,15 @@ void matnf_transpose(float *mr, int rowr, int colr, float *ma, int rowa, int col
     }
 }
 
-void matnf_identity(float *m, int n)
+void matnf_mul(float *mr, float *ma, int rowa, int cola, float *mb, int rowb, int colb)
 {
-    for (int i = 0; i < n; i++) {
-        for (int j = 0; j < n; j++) {
-            m[i * n + j] = (i == j) ? 1 : 0;
+    for (int i = 0; i < rowa; i++) {
+        for (int j = 0; j < colb; j++) {
+            float sum = 0;
+            for (int k = 0; k < cola; k++) {
+                sum += ma[i * cola + k] * mb[k * colb + j];
+            }
+            mr[i * colb + j] = sum;
         }
     }
 }

@@ -11,7 +11,7 @@ uint32_t get_tick_count(void)
     return (ts.tv_sec * 1000 + ts.tv_nsec / 1000000);
 }
 
-int frame_rate_control(uint32_t frc[4], int frate)
+int frame_rate_ctrl(uint32_t frc[4], int frate)
 {
     uint32_t *last_tick = frc + 0;
     uint32_t *next_tick = frc + 1;

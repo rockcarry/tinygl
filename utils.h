@@ -15,6 +15,6 @@
 
 uint32_t get_tick_count(void);
 
-int frame_rate_control(uint32_t frc[4], int frate);
+int frame_rate_ctrl(uint32_t frc[4], int frate);
 
 #endif

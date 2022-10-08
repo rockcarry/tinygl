@@ -9,9 +9,9 @@ typedef struct { float m[4][4]; } mat4f_t;
 #define matnf_add(mr, ma, mb, row, col) vecnf_add(mr, ma, mb, row * col)
 #define matnf_sub(mr, ma, mb, row, col) vecnf_sub(mr, ma, mb, row * col)
 
-void matnf_mul(float *mr, float *ma, int rowa, int cola, float *mb, int rowb, int colb);
+void matnf_identity(float *m, int n);
 void matnf_transpose(float *mr, int rowr, int colr, float *ma, int rowa, int cola);
-void matnf_identity (float *m, int n);
+void matnf_mul(float *mr, float *ma, int rowa, int cola, float *mb, int rowb, int colb);
 
 mat3f_t mat3f_identity(void);
 mat3f_t mat3f_transpose(mat3f_t m);
