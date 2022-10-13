@@ -12,7 +12,6 @@ static vec3f_t barycentric(vertex_t v[3], int x, int y)
 void draw_triangle(TEXTURE *target, float *zbuf, SHADER *shader, vertex_t v[3])
 {
     vec4f_t vmin, vmax; int i, j, c;
-    if (shader->vertex(shader, v) != 0) return;
     for (vmin = vmax = v[0].v, i = 1; i < 3; i++) vmin = vec4f_min(vmin, v[i].v), vmax = vec4f_max(vmax, v[i].v);
     int iminx = vmin.x > 0 ? floor(vmin.x) : 0;
     int iminy = vmin.y > 0 ? floor(vmin.y) : 0;

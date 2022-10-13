@@ -42,6 +42,7 @@ float   vec3f_len(vec3f_t a)                 { return sqrtf(a.x * a.x + a.y * a.
 vec3f_t vec3f_normalize(vec3f_t a)           { return vec3f_mul(a, 1 / vec3f_len(a)); }
 vec3f_t vec3f_cross(vec3f_t a, vec3f_t b)    { vec3f_t v = {{ a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x }}; return v; } 
 
+
 vec4f_t vec4f_new(float x, float y, float z, float w) { vec4f_t v = {{ x  , y  , z  , w }}; return v; }
 vec4f_t vec4f_from_vec3f(vec3f_t a, float w)          { vec4f_t v = {{ a.x, a.y, a.z, w }}; return v; }
 vec4f_t vec4f_min(vec4f_t a, vec4f_t b)      { vec4f_t v = {{ MIN(a.x, b.x), MIN(a.y, b.y), MIN(a.z, b.z), MIN(a.w, b.w) }}; return v; }
@@ -52,3 +53,42 @@ vec4f_t vec4f_mul(vec4f_t a, float   k)      { vec4f_t v = {{    (a.x* k  ),    
 float   vec4f_dot(vec4f_t a, vec4f_t b)      { return      (a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w); }
 float   vec4f_len(vec4f_t a)                 { return sqrtf(a.x * a.x + a.y * a.y + a.z * a.z + a.w * a.w); }
 vec4f_t vec4f_normalize(vec4f_t a)           { return vec4f_mul(a, 1 / vec4f_len(a)); }
+
+vec2f_t vec2f_lerp(vec2f_t a, vec2f_t b, float t)
+{
+    vec2f_t v = {{
+        a.x + (b.x - a.x) * t,
+        a.y + (b.y - a.y) * t,
+    }};
+    return v;
+}
+
+vec3f_t vec3f_lerp(vec3f_t a, vec3f_t b, float t)
+{
+    vec3f_t v = {{
+        a.x + (b.x - a.x) * t,
+        a.y + (b.y - a.y) * t,
+        a.z + (b.z - a.z) * t,
+    }};
+    return v;
+}
+
+vec4f_t vec4f_lerp(vec4f_t a, vec4f_t b, float t)
+{
+    vec4f_t v = {{
+        a.x + (b.x - a.x) * t,
+        a.y + (b.y - a.y) * t,
+        a.z + (b.z - a.z) * t,
+        a.w + (b.w - a.w) * t,
+    }};
+    return v;
+}
+
+color_t color_lerp(color_t a, color_t b, float t)
+{
+    color_t c;
+    c.argb[0] = a.argb[0] + (b.argb[0] - a.argb[0]) * t;
+    c.argb[1] = a.argb[1] + (b.argb[1] - a.argb[1]) * t;
+    c.argb[2] = a.argb[2] + (b.argb[2] - a.argb[2]) * t;
+    return c;
+}

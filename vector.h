@@ -42,8 +42,8 @@ typedef struct {
     vec4f_t v;  // 顶点坐标
     vec4f_t vn; // 法向量
     vec2f_t vt; // 纹理坐标
+    color_t c;  // 颜色值
     float   w;  // 透视插值系数（透视投影校正系数）
-    color_t c ; // 颜色值
 } vertex_t;
 
 color_t color_rgb (uint8_t r, uint8_t g, uint8_t b);
@@ -88,5 +88,10 @@ vec4f_t vec4f_mul(vec4f_t a, float   k);
 float   vec4f_dot(vec4f_t a, vec4f_t b);
 float   vec4f_len(vec4f_t a);
 vec4f_t vec4f_normalize(vec4f_t a);
+
+vec2f_t vec2f_lerp(vec2f_t a, vec2f_t b, float t);
+vec3f_t vec3f_lerp(vec3f_t a, vec3f_t b, float t);
+vec4f_t vec4f_lerp(vec4f_t a, vec4f_t b, float t);
+color_t color_lerp(color_t a, color_t b, float t);
 
 #endif

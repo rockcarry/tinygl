@@ -15,9 +15,9 @@ static char *s_model_list[][2] = {
 };
 
 static char *s_shader_list[][2] = {
-    { "wire"   , "none"    }, // 线框
-    { "rand"   , "color0"  }, // 随机颜色，色块填充
-    { "rand"   , "color1"  }, // 随机颜色，渐变填充
+    { "mvpp"   , "wire"    }, // 线框
+    { "rand0"  , "color0"  }, // 随机颜色，色块填充
+    { "rand1"  , "color1"  }, // 随机颜色，渐变填充
     { "flat"   , "color0"  }, // flat 着色，颜色填充
     { "gouraud", "color1"  }, // gouraud 着色，颜色填充
     { "mvpp"   , "phong"   }, // phong 着色，颜色填充
@@ -44,8 +44,8 @@ static void my_winmsg_callback(void *cbctx, int msg, uint32_t param1, uint32_t p
         if (param1) {
             switch (param2) {
             case ' ': demo->change_shader = 1; break;
-            case 'E': case 'e': demo->camera_position.z -= 0.5; demo->camera_target.y = demo->camera_position.y; break;
-            case 'D': case 'd': demo->camera_position.z += 0.5; demo->camera_target.y = demo->camera_position.y; break;
+            case 'E': case 'e': demo->camera_position.z -= 0.1; demo->camera_target.y = demo->camera_position.y; break;
+            case 'D': case 'd': demo->camera_position.z += 0.1; demo->camera_target.y = demo->camera_position.y; break;
             case 'S': case 's': demo->camera_position.x -= 0.1; demo->camera_target.x = demo->camera_position.x; break;
             case 'F': case 'f': demo->camera_position.x += 0.1; demo->camera_target.x = demo->camera_position.x; break;
             }
@@ -58,7 +58,7 @@ int main(void)
 {
     DEMO  demo= { 1, {{ 0, 0, 3 }}, {{ 0, 0, -1 }}, {{ 0, 1, 0 }} };
     void *models[ARRAYSIZE(s_model_list)] = { NULL };
-    int   curshader = 3, angle = 0, i;
+    int   curshader = 0, angle = 0, i;
     void *win = wingdi_init(640, 480, my_winmsg_callback, &demo);
     void *gl  = tinygl_init(0, 0);
     mat4f_t matmodel, matview, matproj;
@@ -67,7 +67,7 @@ int main(void)
     tinygl_set(gl, "target"       , wingdi_get(win, "texture"));
     tinygl_set(gl, "shader.target", wingdi_get(win, "texture"));
     matproj = mat4f_perspective(60 * 2 * M_PI / 360, 640.0 / 480.0, 0.1, 10000);
-    tinygl_set(gl, "shader.mat_proj", &matproj );
+    tinygl_set(gl, "shader.mat_proj", &matproj);
 
     for (i = 0; i < ARRAYSIZE(models); i++) models[i] = model_load(s_model_list[i][0], s_model_list[i][1]);
     while (strcmp(wingdi_get(win, "state"), "closed") != 0) {

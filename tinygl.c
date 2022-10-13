@@ -13,6 +13,7 @@ typedef struct {
     SHADER  *shader;
     SHADER  *defshd;
     float   *zbuffer;
+    mat4f_t  matvport;
 } TINYGL;
 
 static int reinitzbuffer(TINYGL *gl, int zw, int zh)
@@ -26,6 +27,67 @@ static int reinitzbuffer(TINYGL *gl, int zw, int zh)
     }
     for (int i = 0, n = zw * zh; i < n; i++) gl->zbuffer[i] = -FLT_MAX;
     return 0;
+}
+
+#define CLIP_W_EPSILON (1e-5f)
+static int is_inside_plane(int plane, vec4f_t coord) {
+    switch (plane) {
+    case  0: return coord.w >= CLIP_W_EPSILON; //  w
+    case  1: return coord.x <= +coord.w; //  x
+    case  2: return coord.x >= -coord.w; // -x
+    case  3: return coord.y <= +coord.w; //  y
+    case  4: return coord.y >= -coord.w; // -y
+    case  5: return coord.z <= +coord.w; //  z
+    case  6: return coord.z >= -coord.w; // -z
+    default: return 0;
+    }
+}
+
+static float get_interpolation(int plane, vec4f_t pre, vec4f_t cur)
+{
+    switch (plane) {
+    case  0: return (pre.w - CLIP_W_EPSILON) / (pre.w - cur.w);
+    case  1: return (pre.w - pre.x) / ((pre.w - pre.x) - (cur.w - cur.x));
+    case  2: return (pre.w + pre.x) / ((pre.w + pre.x) - (cur.w + cur.x));
+    case  3: return (pre.w - pre.y) / ((pre.w - pre.y) - (cur.w - cur.y));
+    case  4: return (pre.w + pre.y) / ((pre.w + pre.y) - (cur.w + cur.y));
+    case  5: return (pre.w - pre.z) / ((pre.w - pre.z) - (cur.w - cur.z));
+    case  6: return (pre.w + pre.z) / ((pre.w + pre.z) - (cur.w + cur.z));
+    default: return 0;
+    }
+}
+
+static int clip_with_plane(int plane, vertex_t *vlist, int vnum, vertex_t *ilist)
+{
+    int  i, ipre, in_pre, in_cur, inum = 0;
+    for (i = 0; i < vnum; i++) {
+        ipre = (i + (vnum - 1)) % vnum;
+        vertex_t vpre = vlist[ipre];
+        vertex_t vcur = vlist[i   ];
+        in_pre = is_inside_plane(plane, vpre.v);
+        in_cur = is_inside_plane(plane, vcur.v);
+        if (in_pre != in_cur) {
+            float t = get_interpolation(plane, vpre.v, vcur.v);
+            ilist[inum  ].v = vec4f_lerp(vpre.v , vcur.v , t);
+            ilist[inum  ].vn= vec4f_lerp(vpre.vn, vcur.vn, t);
+            ilist[inum  ].vt= vec2f_lerp(vpre.vt, vcur.vt, t);
+            ilist[inum++].c = color_lerp(vpre.c , vcur.c , t);
+        }
+        if (in_cur) ilist[inum++] = vcur;
+    }
+    return inum;
+}
+
+static vec4f_t perspective_division(vec4f_t v) { return vec4f_new(v.x / v.w, v.y / v.w, v.z / v.w, 1); }
+
+static int is_back_facing(vertex_t v[3]) {
+    vec3f_t a = {{ v[0].v.x, v[0].v.y, v[0].v.z }};
+    vec3f_t b = {{ v[1].v.x, v[1].v.y, v[1].v.z }};
+    vec3f_t c = {{ v[2].v.x, v[2].v.y, v[2].v.z }};
+    float signed_area = a.x * b.y - a.y * b.x
+                      + b.x * c.y - b.y * c.x
+                      + c.x * a.y - c.y * a.x;
+    return signed_area <= 0;
 }
 
 void* tinygl_init(int w, int h)
@@ -75,12 +137,35 @@ void tinygl_end(void *ctx) { TINYGL *gl = (TINYGL*)ctx; if (gl) texture_unlock(g
 void tinygl_draw(void *ctx, void *m)
 {
     TINYGL  *gl = (TINYGL*)ctx;
-    vertex_t t[3];
+    vertex_t ft[3], ct[3];
+    vertex_t vlist1[5];
+    vertex_t vlist2[5];
+    int      i, j, k, n;
     if (!gl) return;
     int nface = model_get_face(m, -1, NULL);
-    for (int i = 0; i < nface; i++) {
-        model_get_face(m, i, t);
-        draw_triangle(gl->target, gl->zbuffer, gl->shader, t);
+    for (i = 0; i < nface; i++) {
+        model_get_face(m, i, ft);
+        if (gl->shader->vertex(gl->shader, ft) == 0) {
+            n = clip_with_plane(0, ft    , 3, vlist1);
+            n = clip_with_plane(1, vlist1, n, vlist2);
+            n = clip_with_plane(2, vlist2, n, vlist1);
+            n = clip_with_plane(3, vlist1, n, vlist2);
+            n = clip_with_plane(4, vlist2, n, vlist1);
+            n = clip_with_plane(5, vlist1, n, vlist2);
+            n = clip_with_plane(6, vlist2, n, vlist1);
+            for (j = 0; j < n - 2; j++) {
+                ct[0] = vlist1[0];
+                ct[1] = vlist1[j + 1];
+                ct[2] = vlist1[j + 2];
+                for (k = 0; k < 3; k++) {
+                    ct[k].w = ct[k].v.w;
+                    ct[k].v = perspective_division(ct[k].v);
+                }
+                if (is_back_facing(ct)) continue;
+                for (k = 0; k < 3; k++) ct[k].v = mat4f_mul_vec4f(gl->matvport, ct[k].v);
+                draw_triangle(gl->target, gl->zbuffer, gl->shader, ct);
+            }
+        }
     }
 }
 
@@ -96,8 +181,7 @@ void tinygl_viewport(void *ctx, int x, int y, int w, int h, int depth)
 {
     TINYGL *gl = (TINYGL*)ctx;
     if (!ctx) return;
-    mat4f_t m = mat4f_viewport(x, y, w, h, depth);
-    shader_set(gl->shader, "mat_port", &m);
+    gl->matvport = mat4f_viewport(x, y, w, h, depth);
 }
 
 void tinygl_set(void *ctx, char *name, void *data)

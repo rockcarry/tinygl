@@ -318,12 +318,11 @@ mat4f_t mat4f_lookat(vec3f_t eye, vec3f_t target, vec3f_t up)
 
 mat4f_t mat4f_perspective(float fovy, float aspect, float near, float far)
 {
-    float z_range = far - near;
     mat4f_t m = mat4f_identity();
     m.m[1][1] = 1 / tanf(fovy / 2);
     m.m[0][0] = m.m[1][1] / aspect;
-    m.m[2][2] =-(near + far) / z_range;
-    m.m[2][3] = 2 * near * far / z_range;
+    m.m[2][2] = 1 * (far + near) / (far - near);
+    m.m[2][3] = 2 * (far * near) / (far - near);
     m.m[3][2] =-1;
     m.m[3][3] = 0;
     return m;
@@ -335,8 +334,8 @@ mat4f_t mat4f_viewport(int x, int y, int w, int h, int depth)
     m.m[0][3] = x + w / 2.0;
     m.m[1][3] = y + h / 2.0;
     m.m[2][3] = depth / 2.0;
-    m.m[0][0] = w / 2.0;
-    m.m[1][1] = h /-2.0;
+    m.m[0][0] =(w - 1) / 2.0;
+    m.m[1][1] =(h - 1) /-2.0;
     m.m[2][2] = depth / 2.0;
     return m;
 }

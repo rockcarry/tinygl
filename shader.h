@@ -5,7 +5,7 @@
 #include "texture.h"
 
 typedef struct shader_t {
-    mat4f_t  mat_model, mat_view, mat_proj, mat_port;
+    mat4f_t  mat_model, mat_view, mat_proj;
     vec3f_t  light;
     TEXTURE *target;
     TEXTURE *texture;

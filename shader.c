@@ -3,8 +3,6 @@
 #include <string.h>
 #include "shader.h"
 
-static vec4f_t perspective_division(vec4f_t v) { return vec4f_new(v.x / v.w, v.y / v.w, v.z / v.w, 1); }
-
 static vec3f_t perspective_correction(vertex_t t[3], vec3f_t bc)
 {
     vec3f_t v = {{ bc.alpha / t[0].w, bc.beta / t[1].w, bc.gamma / t[2].w }};
@@ -57,68 +55,66 @@ static color_t color_get_by_uv(struct shader_t *sd, vec2f_t uv)
     return c;
 }
 
-static void model_transform(struct shader_t *sd, vertex_t t[3]) {
-    int i; for (i = 0; i < 3; i++) { t[i].v = mat4f_mul_vec4f(sd->mat_model, t[i].v); t[i].vn = mat4f_mul_vec4f(sd->mat_model, t[i].vn); }
+static void model_view_proj_transform(struct shader_t *sd, vertex_t t[3]) {
+    for (int i = 0; i < 3; i++) {
+        t[i].vn = mat4f_mul_vec4f(sd->mat_model, t[i].vn);
+        t[i].v  = mat4f_mul_vec4f(sd->mat_model, t[i].v );
+        t[i].v  = mat4f_mul_vec4f(sd->mat_view , t[i].v );
+        t[i].v  = mat4f_mul_vec4f(sd->mat_proj , t[i].v );
+    }
 }
 
-static int perspective_projection(struct shader_t *sd, vertex_t t[3])
+static int randcolor0_vertex(struct shader_t *sd, vertex_t t[3])
 {
-    for (int i = 0; i < 3; i++) {
-        t[i].v = mat4f_mul_vec4f(sd->mat_view , t[i].v);
-        t[i].v = mat4f_mul_vec4f(sd->mat_proj , t[i].v);
-        t[i].w = t[i].v.w;
-        t[i].v = perspective_division(t[i].v);
-        t[i].v = mat4f_mul_vec4f(sd->mat_port , t[i].v);
-    }
+    model_view_proj_transform(sd, t);
+    t[0].c = t[1].c = t[2].c = color_rgb(rand(), rand(), rand());
+    for (int i = 0; i < 6; i++) rand();
     return 0;
 }
 
-static int wireframe_vertex(struct shader_t *sd, vertex_t t[3])
+static int randcolor1_vertex(struct shader_t *sd, vertex_t t[3])
 {
-    model_transform(sd, t);
-    perspective_projection(sd, t);
-    for (int i = 0; i < 3; i++) texture_line(sd->target, t[i].v.x, t[i].v.y, t[(i + 1) % 3].v.x, t[(i + 1) % 3].v.y, sd->color.c);
-    return -1;
-}
-
-static int randcolor_vertex(struct shader_t *sd, vertex_t t[3])
-{
-    model_transform(sd, t);
-    perspective_projection(sd, t);
+    model_view_proj_transform(sd, t);
     for (int i = 0; i < 3; i++) t[i].c = color_rgb(rand(), rand(), rand());
     return 0;
 }
 
 static int flatcolor_vertex(struct shader_t *sd, vertex_t t[3])
 {
-    model_transform(sd, t);
+    model_view_proj_transform(sd, t);
     vec3f_t v1 = vec3f_new(t[2].v.x - t[0].v.x, t[2].v.y - t[0].v.y, t[2].v.z - t[0].v.z);
     vec3f_t v2 = vec3f_new(t[1].v.x - t[0].v.x, t[1].v.y - t[0].v.y, t[1].v.z - t[0].v.z);
     vec3f_t vn = vec3f_normalize(vec3f_cross(v1, v2));
     float intensity = vec3f_dot(vn, sd->light);
     if (intensity < 0) return -1;
     for (int i = 0; i < 3; i++) t[i].c = color_intensity(sd->color, intensity);
-    perspective_projection(sd, t);
     return 0;
 }
 
 static int gouraud_vertex(struct shader_t *sd, vertex_t t[3])
 {
-    model_transform(sd, t);
+    model_view_proj_transform(sd, t);
     for (int i = 0; i < 3; i++) {
         float intensity = vec3f_dot(vec3f_from_vec4f(t[i].vn), sd->light);
         if (intensity < 0) return -1;
         t[i].c = color_intensity(sd->color, intensity);
     }
-    perspective_projection(sd, t);
     return 0;
 }
 
 static int mvpp_vertex(struct shader_t *sd, vertex_t t[3])
 {
-    model_transform(sd, t);
-    perspective_projection(sd, t);
+    model_view_proj_transform(sd, t);
     return 0;
+}
+
+static int wireframe_fragmt(struct shader_t *sd, vertex_t t[3], vec3f_t bc)
+{
+    if (t[0].w) {
+        for (int i = 0; i < 3; i++) texture_line(sd->target, t[i].v.x, t[i].v.y, t[(i + 1) % 3].v.x, t[(i + 1) % 3].v.y, sd->color.c);
+        t[0].w = 0;
+    }
+    return -1;
 }
 
 static int fillcolor0_fragmt(struct shader_t *sd, vertex_t t[3], vec3f_t bc) { return t[0].c.c; }
@@ -166,8 +162,8 @@ static int texture2_fragmt(struct shader_t *sd, vertex_t t[3], vec3f_t bc)
 static struct {
     char *name;      int (*vertex)(struct shader_t *sd, vertex_t t[3]);
 } s_vlist[] = {
-    { "wire"       , wireframe_vertex  },
-    { "rand"       , randcolor_vertex  },
+    { "rand0"      , randcolor0_vertex },
+    { "rand1"      , randcolor1_vertex },
     { "flat"       , flatcolor_vertex  },
     { "gouraud"    , gouraud_vertex    },
     { "mvpp"       , mvpp_vertex       },
@@ -177,6 +173,7 @@ static struct {
 static struct {
     char *name;      int (*fragmt)(struct shader_t *sd, vertex_t t[3], vec3f_t bc);
 } s_flist[] = {
+    { "wire"       , wireframe_fragmt  },
     { "color0"     , fillcolor0_fragmt },
     { "color1"     , fillcolor1_fragmt },
     { "phong"      , phongcolor_fragmt },
@@ -211,7 +208,7 @@ SHADER* shader_init(char *vertex, char *fragmt)
     sd->light .z = -1;
     sd->vertex   = flatcolor_vertex;
     sd->fragmt   = fillcolor0_fragmt;
-    sd->mat_model = sd->mat_view = sd->mat_proj = sd->mat_port = mat4f_identity();
+    sd->mat_model = sd->mat_view = sd->mat_proj = mat4f_identity();
     set_vertex(sd, vertex);
     set_fragmt(sd, fragmt);
     return sd;
@@ -225,7 +222,6 @@ void shader_set(SHADER *sd, char *name, void *data)
     if      (strcmp(name, "mat_model") == 0) sd->mat_model = *(mat4f_t*)data;
     else if (strcmp(name, "mat_view" ) == 0) sd->mat_view  = *(mat4f_t*)data;
     else if (strcmp(name, "mat_proj" ) == 0) sd->mat_proj  = *(mat4f_t*)data;
-    else if (strcmp(name, "mat_port" ) == 0) sd->mat_port  = *(mat4f_t*)data;
     else if (strcmp(name, "target"   ) == 0) sd->target    = data;
     else if (strcmp(name, "texture"  ) == 0) sd->texture   = data;
     else if (strcmp(name, "color"    ) == 0) sd->color     = *(color_t*)data;
@@ -240,7 +236,6 @@ void* shader_get(SHADER *sd, char *name)
     if      (strcmp(name, "mat_model") == 0) return &sd->mat_model;
     else if (strcmp(name, "mat_view" ) == 0) return &sd->mat_view ;
     else if (strcmp(name, "mat_proj" ) == 0) return &sd->mat_proj ;
-    else if (strcmp(name, "mat_port" ) == 0) return &sd->mat_port ;
     else if (strcmp(name, "target"   ) == 0) return  sd->target;
     else if (strcmp(name, "texture"  ) == 0) return  sd->texture;
     else if (strcmp(name, "color"    ) == 0) return &sd->color;
