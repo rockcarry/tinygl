@@ -318,19 +318,25 @@ void texture_bitblt(TEXTURE *dst, int dstx, int dsty, TEXTURE *src, int srcx, in
     }
 }
 
+static uint32_t alpha_blend(uint32_t a, uint32_t b, uint8_t alpha)
+{
+    uint32_t a_br  = a & 0xFF00FF;
+    uint32_t b_br  = b & 0xFF00FF;
+    uint32_t a_g   = a & 0x00FF00;
+    uint32_t b_g   = b & 0x00FF00;
+    uint32_t c_br  = b_br + alpha * (a_br - b_br) / 256;
+    uint32_t c_g   = b_g  + alpha * (a_g  - b_g ) / 256;
+    return (c_br & (0xFF00FF)) | (c_g & 0x00FF00);
+}
+
 void texture_fillrect(TEXTURE *t, int x, int y, int w, int h, uint32_t c)
 {
-    uint8_t *c_argb = (uint8_t*)&c;
+    uint8_t alpha = c >> 24;
     if (!t) return;
-    if (c_argb[3]) {
+    if (alpha) {
         for (int i = 0; i < h; i++) {
             for (int j = 0; j < w; j++) {
-                uint32_t bc = texture_getcolor(t, x + j, y + i);
-                uint8_t *b_argb = (uint8_t*)&bc;
-                b_argb[2] = c_argb[2] + c_argb[3] * (b_argb[2] - c_argb[2]) / 255;
-                b_argb[1] = c_argb[1] + c_argb[3] * (b_argb[1] - c_argb[1]) / 255;
-                b_argb[0] = c_argb[0] + c_argb[3] * (b_argb[0] - c_argb[0]) / 255;
-                texture_setcolor(t, x + j, y + i, bc);
+                texture_setcolor(t, x + j, y + i, alpha_blend(texture_getcolor(t, x + j, y + i), c, alpha));
             }
         }
     } else {
