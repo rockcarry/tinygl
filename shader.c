@@ -124,8 +124,7 @@ static int phongcolor_fragmt(struct shader_t *sd, vertex_t t[3], vec3f_t bc)
 {
     vec4f_t vn = normal_interpolate(t, perspective_correction(t, bc));
     float intensity = vec3f_dot(vec3f_from_vec4f(vn), sd->light);
-    if (intensity < 0) return -1;
-    return color_intensity(sd->color, intensity).c;
+    return intensity > 0 ? color_intensity(sd->color, intensity).c : 0;
 }
 
 static int normal0_fragmt(struct shader_t *sd, vertex_t t[3], vec3f_t bc)
@@ -146,8 +145,7 @@ static int texture0_fragmt(struct shader_t *sd, vertex_t t[3], vec3f_t bc)
 static int texture1_fragmt(struct shader_t *sd, vertex_t t[3], vec3f_t bc)
 {
     float intensity = vec3f_dot(vec3f_from_vec4f(t[0].vn), sd->light);
-    if (intensity < 0) return -1;
-    return color_intensity(color_get_by_uv(sd, uv_interpolate(t, perspective_correction(t, bc))), intensity).c;
+    return intensity > 0 ? color_intensity(color_get_by_uv(sd, uv_interpolate(t, perspective_correction(t, bc))), intensity).c : 0;
 }
 
 static int texture2_fragmt(struct shader_t *sd, vertex_t t[3], vec3f_t bc)
@@ -155,8 +153,7 @@ static int texture2_fragmt(struct shader_t *sd, vertex_t t[3], vec3f_t bc)
     vec3f_t pcbc = perspective_correction(t, bc);
     vec4f_t vn   = normal_interpolate(t, pcbc);
     float intensity = vec3f_dot(vec3f_from_vec4f(vn), sd->light);
-    if (intensity < 0) return -1;
-    return color_intensity(color_get_by_uv(sd, uv_interpolate(t, pcbc)), intensity).c;
+    return intensity > 0 ? color_intensity(color_get_by_uv(sd, uv_interpolate(t, pcbc)), intensity).c : 0;
 }
 
 static struct {

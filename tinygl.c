@@ -138,8 +138,8 @@ void tinygl_draw(void *ctx, void *m)
 {
     TINYGL  *gl = (TINYGL*)ctx;
     vertex_t ft[3], ct[3];
-    vertex_t vlist1[5];
-    vertex_t vlist2[5];
+    vertex_t vlist1[8];
+    vertex_t vlist2[8];
     int      i, j, k, n;
     if (!gl) return;
     int nface = model_get_face(m, -1, NULL);
