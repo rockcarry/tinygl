@@ -7,7 +7,6 @@
 #define RGB(r, g, b) (((unsigned)(r) << 16) | ((unsigned)(g) << 8) | ((unsigned)(b) << 0))
 #endif
 
-/* BMP 对象的类型定义 */
 typedef struct texture_t {
     int       w, h; /* 宽高 */
     uint32_t *data; /* 指向数据 */
